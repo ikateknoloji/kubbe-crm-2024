@@ -44,3 +44,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/product_categories', [CategoryController::class, 'index']);
     
 });
+
+/** sipariş oluşturma ve validation işlemlerini yapıyoruz. **/
+Route::middleware('check.single.role:musteri')->group(function () {
+        // Sipariş oluşturma rotası
+        Route::post('/order-create', [StoreOrderController::class, 'createOrder']);
+        // Form içeriklerinin validation işlemlerini yapıyoruz.
+        Route::post('/validate-form', [StoreOrderController::class, 'validateForms']);
+        // Form içeriklerinin validation işlemlerini yapıyoruz.
+        Route::post('/validate-order-item', [StoreOrderController::class, 'validateOrderItem']);
+});
