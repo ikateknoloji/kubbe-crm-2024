@@ -6,6 +6,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\Auth\AuthController;
 use App\Http\Controllers\V1\Auth\ProfileController;
 use App\Http\Controllers\V1\Auth\UserController;
+use App\Http\Controllers\V1\Category\CategoryController;
+use App\Http\Controllers\V1\Category\TypeController;
 use App\Http\Controllers\V1\Order\StoreOrderController;
 
 // Kullanıcı Oluşturma veya Giriş yapma
@@ -37,6 +39,8 @@ Route::middleware('auth:sanctum')->group(function () {
     /**Kullanıcı oluşturma veya giriş yapma gibi işlemlerin sonu**/
 
 
-
+    // Kategori ve ürün tipleri ile ilgili kategori ve ürün tiplerini görüntüleme
+    Route::get('/product_types/{category}', [TypeController::class, 'showByCategory']);
+    Route::get('/product_categories', [CategoryController::class, 'index']);
     
 });
