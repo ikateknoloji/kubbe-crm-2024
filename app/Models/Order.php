@@ -230,4 +230,10 @@ class Order extends Model
     {
         return $this->hasOne(RejectedOrder::class);
     }
+
+    public function logoImage(): HasOne
+    {   
+        return $this->hasOne(OrderImage::class)->where('type', 'L');
+    }
+
 }

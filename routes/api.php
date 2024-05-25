@@ -15,6 +15,10 @@ use App\Http\Controllers\V1\Order\StoreOrderController;
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
+Route::middleware('auth:sanctum')->get('/validate-token', function (Request $request) {
+    // Kullanıcı doğrulandıysa, token geçerlidir
+    return response()->json(['message' => 'Token is valid'], 200);
+});
 
 Route::middleware('auth:sanctum')->group(function () {
 
