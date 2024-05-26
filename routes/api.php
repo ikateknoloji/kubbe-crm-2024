@@ -18,6 +18,7 @@ use App\Http\Controllers\V1\Order\RejectOrderController;
 use App\Http\Controllers\V1\Order\StoreOrderController;
 use App\Http\Controllers\V1\Role\GetUserInfoController;
 use App\Http\Controllers\V1\Role\RoleController;
+use App\Http\Controllers\V1\Update\UpdateOrderController;
 
 // Kullanıcı Oluşturma veya Giriş yapma
 Route::post('/register', [AuthController::class, 'register']);
@@ -248,4 +249,36 @@ Route::middleware('auth:sanctum')->group(function () {
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/download-order-image/{orderId}/{type}', [OrderImageController::class, 'downloadOrderImage']);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+ Route::middleware(['check.single.role:admin', 'check.single.role:musteri'])->group(function () {
+    // 'update-logo-image/{orderId}' rotasını tanımlayın
+    Route::post('/update-logo-image/{orderId}', [UpdateOrderController::class, 'updateLogoImage']);
+    // 'update-design/{order}' rotasını tanımlayın
+    Route::post('/update-design/{order}', [UpdateOrderController::class, 'updateDesign']);
+    // 'update-customer-info/{orderId}' rotasını tanımlayın
+    Route::post('/update-customer-info/{orderId}', [UpdateOrderController::class, 'updateCustomerInfo']);
+    // 'update-logo-image/{orderId}' rotasını tanımlayın
+    Route::post('/update-logo-image/{orderId}', [UpdateOrderController::class, 'updateLogoImage']);
+    // 'update-design/{order}' rotasını tanımlayın
+    Route::post('/update-design/{order}', [UpdateOrderController::class, 'updateDesign']);
+    // 'update-customer-info/{orderId}' rotasını tanımlayın
+    Route::post('/update-customer-info/{orderId}', [UpdateOrderController::class, 'updateCustomerInfo']);
+    // 'update-order-address/{orderId}' rotasını tanımlayın
+    Route::post('/update-order-address/{orderId}', [UpdateOrderController::class, 'updateOrderAddress']);
+    // 'update-invoice-info/{orderId}' rotasını tanımlayın
+    Route::post('/update-invoice-info/{orderId}', [UpdateOrderController::class, 'updateInvoiceInfo']);
+    // 'update-payment/{order}' rotasını tanımlayın
+    Route::post('/update-payment/{order}', [UpdateOrderController::class, 'updatePayment']);
+    // 'update-manufacturer/{order}' rotasını tanımlayın
+    Route::post('/update-manufacturer/{order}', [UpdateOrderController::class, 'updateManufacturer']);
+    // 'update-product-ready-image/{order}' rotasını tanımlayın
+    Route::post('/update-product-ready-image/{order}', [UpdateOrderController::class, 'updateProductReadyImage']);
+    Route::post('/update-cargo-code/{order}', [UpdateOrderController::class, 'updateMarkProductInTransition']);
+    // 'update-order-item-and-total-offer-price/{orderItemId}' rotasını tanımlayın
+    Route::post('/update-order-item-and-total-offer-price/{orderItemId}', [UpdateOrderController::class, 'updateOrderItemAndTotalOfferPrice']);
+    // 'mark-product-in-transition/{order}' rotasını tanımlayın
+    Route::post('/mark-product-in-transition/{order}', [UpdateOrderController::class, 'markProductInTransition']);
+ });
 });
