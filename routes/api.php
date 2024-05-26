@@ -12,6 +12,7 @@ use App\Http\Controllers\V1\Manage\ManageOrderController;
 use App\Http\Controllers\V1\Order\GetOrderController;
 use App\Http\Controllers\V1\Order\GetRejectedController;
 use App\Http\Controllers\V1\Order\HistoryOrderController;
+use App\Http\Controllers\V1\Order\OrderImageController;
 use App\Http\Controllers\V1\Order\OrderManageController;
 use App\Http\Controllers\V1\Order\RejectOrderController;
 use App\Http\Controllers\V1\Order\StoreOrderController;
@@ -246,5 +247,5 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
-
+    Route::get('/download-order-image/{orderId}/{type}', [OrderImageController::class, 'downloadOrderImage']);
 });
