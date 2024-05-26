@@ -12,6 +12,7 @@ use App\Http\Controllers\V1\Manage\ManageOrderController;
 use App\Http\Controllers\V1\Order\GetOrderController;
 use App\Http\Controllers\V1\Order\GetRejectedController;
 use App\Http\Controllers\V1\Order\HistoryOrderController;
+use App\Http\Controllers\V1\Order\RejectOrderController;
 use App\Http\Controllers\V1\Order\StoreOrderController;
 use App\Http\Controllers\V1\Role\GetUserInfoController;
 use App\Http\Controllers\V1\Role\RoleController;
@@ -187,4 +188,20 @@ Route::middleware('auth:sanctum')->group(function () {
     // Üreticinin Geçmiş siparişleri getir
     Route::get('/orders/manufacturer-history/{manufacturerId}', [HistoryOrderController::class, 'getManufacturerOrderHistory']);
  });
+});
+
+// Sipariş için iptal isteği oluşturma ve iptal isteği kaldırma
+Route::middleware('auth:sanctum')->group(function () {
+ Route::middleware('check.single.role:admin')->group(function () {
+    // Sipariş için iptal isteği oluşturma
+    Route::post('/orders-cancel', [RejectOrderController::class, 'cancelOrder']);
+    // Sipariş red olarak gönderir
+    Route::post('/orders-reject', [RejectOrderController::class, 'rejectOrder']);
+    // Sipariş Aktif hale getirme
+    Route::post('/orders-activate/{orderId}', [RejectOrderController::class, 'activateOrder']);
+ });
+});
+// Müşteri ve üretici için iptal isteği oluşturma.
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/orders/pending-cancellation', [RejectOrderController::class, 'createPendingCancellation']);
 });
