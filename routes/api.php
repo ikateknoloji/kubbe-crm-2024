@@ -12,6 +12,7 @@ use App\Http\Controllers\V1\Manage\ManageOrderController;
 use App\Http\Controllers\V1\Order\GetOrderController;
 use App\Http\Controllers\V1\Order\GetRejectedController;
 use App\Http\Controllers\V1\Order\HistoryOrderController;
+use App\Http\Controllers\V1\Order\OrderManageController;
 use App\Http\Controllers\V1\Order\RejectOrderController;
 use App\Http\Controllers\V1\Order\StoreOrderController;
 use App\Http\Controllers\V1\Role\GetUserInfoController;
@@ -201,7 +202,49 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders-activate/{orderId}', [RejectOrderController::class, 'activateOrder']);
  });
 });
+
 // Müşteri ve üretici için iptal isteği oluşturma.
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders/pending-cancellation', [RejectOrderController::class, 'createPendingCancellation']);
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+
+ Route::middleware('check.single.role:admin')->group(function () {
+     // Sipariş Durumunu Tasarım Aşamasına Geçirme rotası
+     Route::post('/orders/{order}/transition-to-design', [OrderManageController::class, 'transitionToDesignPhase']);
+     // Ödemeyi Doğrulama rotası
+     Route::post('/orders/{order}/verify-payment', [OrderManageController::class, 'verifyPayment']);
+     // Üretici Seçimi İşlemini Gerçekleştirme rotası
+     Route::post('/orders/{order}/select-manufacturer', [OrderManageController::class, 'selectManufacturer']);
+     // Fatura bilgilerini ekleme
+     Route::post('/orders/add-bill/{order}', [OrderManageController::class, 'addBill']);
+ });
+
+ Route::middleware('check.single.role:musteri')->group(function () {
+    // Ödeme Onayını ve İlerlemeyi Gerçekleştirme rotası
+    Route::post('/orders/{order}/approve-payment-and-proceed', [OrderManageController::class, 'approvePaymentAndProceed']);
+ });
+
+ Route::middleware('check.single.role:tasarimci')->group(function () {
+    // Ödeme Onayını ve İlerlemeyi Gerçekleştirme rotası
+    Route::post('/orders/{order}/approve-design', [OrderManageController::class, 'approveDesign']);
+ });
+
+ Route::middleware('check.single.role:uretici')->group(function () {
+     // Üretim Sürecini Başlatma rotası
+     Route::post('/orders/{order}/start-production', [OrderManageController::class, 'startProduction']);
+     // Ürünün Hazır Olduğunu Belirtme ve Resim Yükleme rotası
+     Route::post('/orders/{order}/mark-product-ready', [OrderManageController::class, 'markProductReady']);
+ });
+
+ Route::middleware('check.single.role:kurye')->group(function () {
+     // Ürünün Kargo Aşamasında Olduğunu Belirtme ve Resim Ekleme rotası
+     Route::post('/orders/{order}/mark-product-in-transition', [OrderManageController::class, 'markProductInTransition']);
+ });
+
+});
+
+Route::middleware('auth:sanctum')->group(function () {
+
 });
