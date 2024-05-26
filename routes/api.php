@@ -11,6 +11,7 @@ use App\Http\Controllers\V1\Category\TypeController;
 use App\Http\Controllers\V1\Manage\ManageOrderController;
 use App\Http\Controllers\V1\Order\GetOrderController;
 use App\Http\Controllers\V1\Order\GetRejectedController;
+use App\Http\Controllers\V1\Order\HistoryOrderController;
 use App\Http\Controllers\V1\Order\StoreOrderController;
 use App\Http\Controllers\V1\Role\GetUserInfoController;
 use App\Http\Controllers\V1\Role\RoleController;
@@ -171,4 +172,19 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/orders-canceled/status/{status}', [GetRejectedController::class, 'getOrdersByStatus']);
         Route::post('/customer-orders-canceled/status/{status}', [GetRejectedController::class, 'getCustomerRejectedOrders']);
     });
+});
+
+// Müşteri ve Üretici sipariş geçmişlerini görüntüleme rotaları.
+Route::middleware('auth:sanctum')->group(function () {
+ Route::middleware('check.single.role:admin')->group(function () {
+
+    // Müşterinin Aktif siparişleri getir
+    Route::get('/orders/customer-active/{customerId}', [HistoryOrderController::class, 'getCustomerActiveOrders']);
+    // Müşterinin Geçmiş siparişleri getir
+    Route::get('/orders/customer-history/{customerId}', [HistoryOrderController::class, 'getCustomerOrderHistory']);
+    // Üreticinin Aktif siparişleri getir
+    Route::get('/orders/manufacturer-active/{manufacturerId}', [HistoryOrderController::class, 'getManufacturerActiveOrders']);
+    // Üreticinin Geçmiş siparişleri getir
+    Route::get('/orders/manufacturer-history/{manufacturerId}', [HistoryOrderController::class, 'getManufacturerOrderHistory']);
+ });
 });
