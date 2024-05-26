@@ -10,6 +10,7 @@ use App\Http\Controllers\V1\Category\CategoryController;
 use App\Http\Controllers\V1\Category\TypeController;
 use App\Http\Controllers\V1\Manage\ManageOrderController;
 use App\Http\Controllers\V1\Order\GetOrderController;
+use App\Http\Controllers\V1\Order\GetRejectedController;
 use App\Http\Controllers\V1\Order\StoreOrderController;
 use App\Http\Controllers\V1\Role\GetUserInfoController;
 use App\Http\Controllers\V1\Role\RoleController;
@@ -87,6 +88,8 @@ Route::middleware('check.single.role:admin')->group(function () {
     Route::get('/orders-billing', [GetOrderController::class, 'getBillingOrders']);
     // Arama İşlemlerini yapma
     Route::get('/admin/search', [GetOrderController::class, 'search']);
+    // Reddedilen , İptal Edilen ve Red Bekleyen siparişleri getir
+    Route::get('/orders/rejected-status/{status}', [GetRejectedController::class, 'getRejectedOrdersByRejectedStatus']);
 });
 
 // Müşteri siparişleri getir
@@ -103,6 +106,8 @@ Route::middleware('check.single.role:musteri')->group(function () {
     Route::get('/customer/order-delayed', [GetOrderController::class, 'getCustomerDelayedOrders']);
     // Arama İşlemlerini yapma
     Route::get('/customer/search', [GetOrderController::class, 'customerSearch']);
+    // Reddedilen , İptal Edilen ve Red Bekleyen siparişleri getir
+    Route::get('/customer/order-rejected/{status}', [GetRejectedController::class, 'getCustomerRejectedOrdersByRejectedStatus']);
 });
 
 /** Tasarımcı sipariş görüntüleme rotasıları. **/
@@ -147,13 +152,23 @@ Route::middleware('check.single.role:uretici')->group(function () {
     Route::get('/manufacturer/order-delayed', [GetOrderController::class, 'getManufacturerDelayedOrders']);
 });
 
-// Şipariş Red , Iptal isteği oluşturma ve iptal isteği kaldırma
-Route::middleware(['check.single.role:admin', 'check.single.role:musteri'])->group(function () {
-    Route::post('/order-cancel-requests/{orderId}', [ManageOrderController::class, 'createCancelRequestAndUpdateStatus']);
-    Route::post('/rejected-orders/{orderId}', [ManageOrderController::class, 'rejectOrder']);
-    Route::post('/process-cancellation/{orderId}', [ManageOrderController::class, 'processCancellation']);
-    Route::post('/activate-order/{orderId}', [ManageOrderController::class, 'activateOrder']);
-    Route::post('/activate-order-cancellation/{orderId}', [ManageOrderController::class, 'activateOrderAndRemoveCancellationRequest']);
 });
 
+// Şipariş Red , Iptal isteği oluşturma ve iptal isteği kaldırma
+Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['check.single.role:admin', 'check.single.role:musteri'])->group(function () {
+        Route::post('/order-cancel-requests/{orderId}', [ManageOrderController::class, 'createCancelRequestAndUpdateStatus']);
+        Route::post('/rejected-orders/{orderId}', [ManageOrderController::class, 'rejectOrder']);
+        Route::post('/process-cancellation/{orderId}', [ManageOrderController::class, 'processCancellation']);
+        Route::post('/activate-order/{orderId}', [ManageOrderController::class, 'activateOrder']);
+        Route::post('/activate-order-cancellation/{orderId}', [ManageOrderController::class, 'activateOrderAndRemoveCancellationRequest']);
+    });
+});
+
+// Şipariş Red , Iptal isteği görüntüleme rotaları.
+Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['check.single.role:admin', 'check.single.role:musteri'])->group(function () {
+        Route::post('/orders-canceled/status/{status}', [GetRejectedController::class, 'getOrdersByStatus']);
+        Route::post('/customer-orders-canceled/status/{status}', [GetRejectedController::class, 'getCustomerRejectedOrders']);
+    });
 });
