@@ -11,6 +11,8 @@ use App\Http\Controllers\V1\Category\TypeController;
 use App\Http\Controllers\V1\Manage\ManageOrderController;
 use App\Http\Controllers\V1\Order\GetOrderController;
 use App\Http\Controllers\V1\Order\StoreOrderController;
+use App\Http\Controllers\V1\Role\GetUserInfoController;
+use App\Http\Controllers\V1\Role\RoleController;
 
 // Kullanıcı Oluşturma veya Giriş yapma
 Route::post('/register', [AuthController::class, 'register']);
@@ -48,7 +50,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Kategori ve ürün tipleri ile ilgili kategori ve ürün tiplerini görüntüleme
     Route::get('/product_types/{category}', [TypeController::class, 'showByCategory']);
     Route::get('/product_categories', [CategoryController::class, 'index']);
+    // Kullanıcı rollerini al
+    Route::post('/roles/select-role', [GetUserInfoController::class, 'getUsersByRole']);
     
+    // Kullanıcı rollerini ekleme veya kaldırma
+    Route::post('/user/{user}/addRole', [RoleController::class, 'addRoleToUser']);
+    Route::delete('/user/{user}/removeRole', [RoleController::class, 'removeRoleFromUser']);
 });
 
 
