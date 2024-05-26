@@ -8,6 +8,7 @@ use App\Http\Controllers\V1\Auth\ProfileController;
 use App\Http\Controllers\V1\Auth\UserController;
 use App\Http\Controllers\V1\Category\CategoryController;
 use App\Http\Controllers\V1\Category\TypeController;
+use App\Http\Controllers\V1\Manage\ManageOrderController;
 use App\Http\Controllers\V1\Order\GetOrderController;
 use App\Http\Controllers\V1\Order\StoreOrderController;
 
@@ -137,6 +138,15 @@ Route::middleware('check.single.role:uretici')->group(function () {
     Route::get('/manufacturer/search', [GetOrderController::class, 'manufacturerSearch']);
     // Gecikmiş siparişleri getir
     Route::get('/manufacturer/order-delayed', [GetOrderController::class, 'getManufacturerDelayedOrders']);
+});
+
+// Şipariş Red , Iptal isteği oluşturma ve iptal isteği kaldırma
+Route::middleware(['check.single.role:admin', 'check.single.role:musteri'])->group(function () {
+    Route::post('/order-cancel-requests/{orderId}', [ManageOrderController::class, 'createCancelRequestAndUpdateStatus']);
+    Route::post('/rejected-orders/{orderId}', [ManageOrderController::class, 'rejectOrder']);
+    Route::post('/process-cancellation/{orderId}', [ManageOrderController::class, 'processCancellation']);
+    Route::post('/activate-order/{orderId}', [ManageOrderController::class, 'activateOrder']);
+    Route::post('/activate-order-cancellation/{orderId}', [ManageOrderController::class, 'activateOrderAndRemoveCancellationRequest']);
 });
 
 });
