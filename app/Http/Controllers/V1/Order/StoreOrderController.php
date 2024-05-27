@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\V1\Order;
 
+use App\Events\AdminNotificationEvent;
+use App\Events\CustomerNotificationEvent;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Order;
@@ -148,9 +150,15 @@ class StoreOrderController extends Controller
                     'mime_type' => $image->getClientMimeType(), // MIME tipini kaydet
                     'order_id' => $order->id,
                 ]);
+
+                broadcast(new AdminNotificationEvent([
+                    'title' => 'Yeni Sipariş Oluşturuldu',
+                    'body' => 'Bir sipariş oluşturuldu.',
+                    'order' => $order,
+                ]));
             }
 
-
+            
             DB::commit();
             // Başarılı oluşturma yanıtı
             return response()->json(['order' => $order], 201);
@@ -221,7 +229,12 @@ class StoreOrderController extends Controller
             'email' => $request->input('email'),
             'order_id' => $order->id, // Yeni oluşturulan siparişin ID'si
         ]);
-    
+        $message = [
+            'title' => 'Sipariş Oluşturuldu',
+            'body' => 'Bir sipariş oluşturuldu.',
+            'order' => $order,
+        ];
+
         // Başarılı ekleme yanıtı
         return response()->json(['invoice_info' => $invoiceInfo], 201);
     } 

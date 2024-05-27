@@ -24,12 +24,12 @@ class AdminNotificationEvent implements ShouldBroadcast
 
     public function __construct($message)
     {
-        AdminNotification::create([
+        $adminNotification = AdminNotification::create([
             'message' => json_encode($message),
             'is_read' => false,
         ]);
     
-        $this->message = $message;
+        $this->message = $adminNotification;
     }
 
     /**

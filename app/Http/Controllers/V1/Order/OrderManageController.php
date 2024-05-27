@@ -2,7 +2,12 @@
 
 namespace App\Http\Controllers\V1\Order;
 
+use App\Events\CourierNotificationEvent;
+use App\Events\CustomerNotificationEvent;
+use App\Events\DesignerNotificationEvent;
+use App\Events\ManufacturerNotificationEvent;
 use App\Http\Controllers\Controller;
+use App\Models\ManufacturerNotification;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\OrderImage;
@@ -51,6 +56,18 @@ class OrderManageController extends Controller
             // Sipariş durumunu 'DP' (Tasarım Aşaması) olarak güncelle
             $order->update(['status' => 'DP', 'customer_read' => false]);
 
+            $message = [
+            'title' => 'Sipariş Onaylandı',
+            'body' => 'Siparişiniz tasarım aşamasına geçildi.',
+            'order' => $order];
+
+            broadcast(new CustomerNotificationEvent($order->customer_id, $message));
+            broadcast(new DesignerNotificationEvent([
+                    'title' => 'Yeni Sipariş Oluşturuldu',
+                    'body' => 'Bir sipariş oluşturuldu.',
+                    'order' => $order,
+            ]));
+            
             return response()->json(['message' => 'Sipariş tasarım aşamasına geçirildi.'], 200);
         }
 
@@ -242,6 +259,13 @@ class OrderManageController extends Controller
                 'estimated_production_date' => $estimated_date->format('Y-m-d H:i:s'), // Tahmini üretim tarihi
             ]);
 
+            $message = [
+            'title' => 'Sipariş Onaylandı',
+            'body' => 'Siparişiniz tasarım aşamasına geçildi.',
+            'order' => $order];
+
+                broadcast(new ManufacturerNotificationEvent($request->input('manufacturer_id'), $message));
+
 
             return response()->json(['message' => 'Üretici seçimi yapıldı.'], 200);
         }
@@ -303,7 +327,7 @@ class OrderManageController extends Controller
     {
         try {
             // Sipariş durumunu kontrol et, sadece 'PP' durumundakileri güncelle
-            if ($order->status === 'PP') { // 'PP' ile eşleştiğini kontrol et
+            if ($order->status === 'Üretimde') { // 'PP' ile eşleştiğini kontrol et
             
                 // Gelen resim dosyasını kontrol et
                 $request->validate([
@@ -344,6 +368,12 @@ class OrderManageController extends Controller
                     'production_date' => now(), // Üretim tarihini ayarla
                 ]);
             
+                broadcast(new CourierNotificationEvent([
+                    'title' => 'Yeni Sipariş Oluşturuldu',
+                    'body' => 'Bir sipariş oluşturuldu.',
+                    'order' => $order,
+                ]));
+
                 return response()->json(['message' => 'Ürün hazırlandı ve kaydedildi.'], 200);
             }
         
@@ -408,7 +438,8 @@ class OrderManageController extends Controller
                     'customer_read' => false,
                     'production_date' => now(), // Üretim tarihini ayarla
                 ]);
-            
+                
+
                 return response()->json(['message' => 'Kargo resim eklendi.'], 200);
             }
         

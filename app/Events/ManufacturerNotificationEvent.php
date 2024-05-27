@@ -2,6 +2,7 @@
 
 namespace App\Events;
 
+use App\Models\ManufacturerNotification;
 use App\Models\UserNotification;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
@@ -26,9 +27,10 @@ class ManufacturerNotificationEvent implements ShouldBroadcast
         $this->manufacturer_id = $manufacturer_id;
 
         // Veritabanına üretici bildirimini kaydet
-        $manufacturerNotification  = UserNotification::create([
+        $manufacturerNotification = ManufacturerNotification::create([
             'user_id' => $this->manufacturer_id,
-            'message' => json_encode($this->message),
+            'message' => json_encode($message), // Bu kısım doğru olmalı
+            'is_read' => false,
         ]);
 
         $this->message = $manufacturerNotification;

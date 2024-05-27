@@ -9,6 +9,8 @@ use App\Http\Controllers\V1\Auth\UserController;
 use App\Http\Controllers\V1\Category\CategoryController;
 use App\Http\Controllers\V1\Category\TypeController;
 use App\Http\Controllers\V1\Manage\ManageOrderController;
+use App\Http\Controllers\V1\Notification\NotificationController;
+use App\Http\Controllers\V1\Notification\NotificationReadController;
 use App\Http\Controllers\V1\Order\GetOrderController;
 use App\Http\Controllers\V1\Order\GetRejectedController;
 use App\Http\Controllers\V1\Order\HistoryOrderController;
@@ -281,4 +283,19 @@ Route::middleware('auth:sanctum')->group(function () {
     // 'mark-product-in-transition/{order}' rotasını tanımlayın
     Route::post('/mark-product-in-transition/{order}', [UpdateOrderController::class, 'markProductInTransition']);
  });
+});
+
+// Bildirim görüntüleme rotaları.
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/notifications/admin', [NotificationController::class, 'getAdminNotifications']);
+    Route::get('/notifications/user', [NotificationController::class, 'getUserNotifications']);
+    Route::get('/notifications/courier', [NotificationController::class, 'getCourierNotifications']);
+    Route::get('/notifications/designer', [NotificationController::class, 'getDesignerNotifications']);
+    Route::get('/notifications/manufacturer', [NotificationController::class, 'getManufacturerNotifications']);
+
+    Route::post('/notifications/admin/{id}/read', [NotificationReadController::class, 'markAdminNotificationAsRead']);
+    Route::post('/notifications/courier/{id}/read', [NotificationReadController::class, 'markCourierNotificationAsRead']);
+    Route::post('/notifications/designer/{id}/read', [NotificationReadController::class, 'markDesignerNotificationAsRead']);
+    Route::post('/notifications/user/{id}/read', [NotificationReadController::class, 'markUserNotificationAsRead']);
+    Route::post('/notifications/manufacturer/{id}/read', [NotificationReadController::class, 'markManufacturerNotificationAsRead']);
 });
