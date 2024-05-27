@@ -15,10 +15,10 @@ return [
     |
     */
 
-    'paths' => ['*'], // 'storage/*' yolu ekleyin
+    'paths' => ['api/*', 'sanctum/csrf-cookie', 'broadcasting/auth'],
     'allowed_methods' => ['*'], // Tüm HTTP metodlarına izin ver
     'allowed_origins' => ['*'], // Frontend uygulamanızın kökenini ekleyin
-    'allowed_origins_patterns' => [],
+    'allowed_origins_patterns' => ['*'],
     'allowed_headers' => ['*'], // Tüm başlıklara izin ver
     'exposed_headers' => ['*'],
     'max_age' => 0,
