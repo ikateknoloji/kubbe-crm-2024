@@ -2,6 +2,11 @@
 
 namespace App\Http\Controllers\V1\Update;
 
+use App\Events\AdminNotificationEvent;
+use App\Events\CourierNotificationEvent;
+use App\Events\CustomerNotificationEvent;
+use App\Events\DesignerNotificationEvent;
+use App\Events\ManufacturerNotificationEvent;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Order;
@@ -77,7 +82,24 @@ class UpdateOrderController extends Controller
                 'mime_type' => $image->getClientMimeType(),
             ]);
         }
+        $order = Order::where('id', $orderId)->first();
+        
+        $message = [
+            'title' => 'Logo resmi güncellendi.',
+            'body' => 'Logo resmi güncellendi lütfen bu yeni logo bilgisiyle tasarımı oluşturun.',
+            'order' => $order
+        ];
 
+        if ($order->status !== 'Sipariş Onayı') {
+            $message = [
+                'title' => 'Sipariş İptal Edildi',
+                'body' => 'Siparişiniz iptal edildi.',
+                'order' => $order
+            ];
+
+            // Bildirimi yayınla
+            broadcast(new DesignerNotificationEvent($message));
+        }
 
         return response()->json(['message' => 'Logo resmi başarıyla güncellendi.'], 200);
     }
@@ -141,6 +163,15 @@ class UpdateOrderController extends Controller
             ]);
         }
     
+        $message = [
+            'title' => 'Tasarım resmi güncellendi.',
+            'body' => 'Tasarım resmi güncellendi lütfen tasarım resmini müşterinizle paylaşın.',
+            'order' => $order
+        ];
+        
+        // Bildirimi yayınla
+        broadcast(new CustomerNotificationEvent($order->customer_id, $message));
+
         return response()->json(['message' => 'Tasarım başarıyla güncellendi.'], 200);
     }
 
@@ -178,7 +209,15 @@ class UpdateOrderController extends Controller
         // Müşteri bilgisini güncelle
         $customerInfo->update($validator->validated());
 
-
+        $message = [
+            'title' => 'Müşteri bilgileri güncellendi.',
+            'body' => 'Müşteri bilgileri inceleyin artık yeni müşteri bilgilerine sahipsiniz.',
+            'order' => $order
+        ];
+        
+        // Bildirimi yayınla
+        broadcast(new AdminNotificationEvent($message));
+        
         // Başarılı yanıt döndür
         return response()->json([
             'message' => 'Müşteri bilgisi başarıyla güncellendi.',
@@ -222,6 +261,26 @@ class UpdateOrderController extends Controller
             'address' => $request->input('address'),
         ]); 
 
+        $order = Order::where('id', $orderId)->firstOrFail();   
+
+        $message = [
+            'title' => 'Sipariş Adresi güncellendi.',
+            'body' => 'Sipariş adresi güncellendi yeni adres bilgileriyle gönderimi gerçekleştirebilirsiniz. ',
+            'order' => $order
+        ];
+
+                
+        if ($order->status == 'Ürün Hazır'|| $order->status == 'Ürün Transfer Aşaması') {
+            $message = [
+                'title' => 'Sipariş İptal Edildi',
+                'body' => 'Siparişiniz iptal edildi.',
+                'order' => $order
+            ];
+
+            // Bildirimi yayınla
+            broadcast(new CourierNotificationEvent($message));
+        }
+        
         // Başarılı yanıt döndür
         return response()->json(['message' => 'Adres başarıyla güncellendi.', 'orderAddress' => $orderAddress], 200);
     }
@@ -263,6 +322,14 @@ class UpdateOrderController extends Controller
         // Fatura bilgisini güncelle
         $invoiceInfo->update($validator->validated());
     
+        $message = [
+            'title' => 'Fatura bilgileri güncellendi.',
+            'body' => 'Fatura bilgileri inceleyin ödemeyi kontrol edin.',
+            'order' => $order
+        ];
+        
+        // Bildirimi yayınla
+        broadcast(new AdminNotificationEvent($message));
 
         // Başarılı yanıt döndür
         return response()->json([
@@ -270,6 +337,7 @@ class UpdateOrderController extends Controller
             'invoiceInfo' => $invoiceInfo
         ], 200);
     }
+    
     /**
      * Belirli bir sipariş kaleminin detaylarını günceller.
      *
@@ -337,7 +405,15 @@ class UpdateOrderController extends Controller
         $order->update(['offer_price' => $totalOfferPrice]);
     
 
-
+        $message = [
+            'title' => 'Teklif fiyatları güncellendi.',
+            'body' => 'Siparişi inceleyebilir ve teklif tutarını inceleyebilirsiniz.',
+            'order' => $order
+        ];
+        
+        // Bildirimi yayınla
+        broadcast(new AdminNotificationEvent($message));
+        
         // Başarılı yanıt döndür
         return response()->json([
             'mesaj' => 'Sipariş kalemi ve toplam teklif fiyatı başarıyla güncellendi.',
@@ -373,7 +449,14 @@ class UpdateOrderController extends Controller
         $order->update([
             'manufacturer_id' => $request->input('manufacturer_id'),
         ]);
-    
+
+        $message = [
+            'title' => 'Üretici güncellendi.',
+            'body' => 'Yeni bir siparişiniz var.',
+            'order' => $order
+        ];
+
+        broadcast(new ManufacturerNotificationEvent($order->manufacturer_id, $message));
 
         return response()->json(['message' => 'Üretici başarıyla güncellendi.'], 200);
     }
@@ -431,6 +514,15 @@ class UpdateOrderController extends Controller
             ]);
         }
 
+        $message = [
+            'title' => 'Ödeme bilgileri güncellendi.',
+            'body' => 'Ödeme bilgileri inceleyin ödemeyi kontrol edin.',
+            'order' => $order
+        ];
+
+        // Bildirimi yayınla
+        broadcast(new AdminNotificationEvent($message));
+
         return response()->json(['message' => 'Ödeme dosyası yüklendi ve güncellendi.'], 200);
     }
 
@@ -487,7 +579,16 @@ class UpdateOrderController extends Controller
                 'mime_type' => $image->getClientMimeType(),
             ]);
         }
-    
+        
+        $message = [
+            'title' => 'Ürün resmi güncellendi.',
+            'body' => 'Ürün resmi güncellendi lütfen ürün resmini müşterinizle paylaşın.',
+            'order' => $order
+        ];
+
+        // Bildirimi yayınla
+        broadcast(new CustomerNotificationEvent($order->customer_id, $message));
+
         return response()->json(['message' => 'Ürün hazır resmi başarıyla güncellendi.'], 200);
     }
 
@@ -544,7 +645,16 @@ class UpdateOrderController extends Controller
                 'mime_type' => $image->getClientMimeType(),
             ]);
         }
-    
+        
+        $message = [
+            'title' => 'Kargo bilgileri güncellendi.',
+            'body' => 'Kargo kodu güncellendi lütfen kargo kodunu indirin.',
+            'order' => $order
+        ];
+
+        // Bildirimi yayınla
+        broadcast(new CustomerNotificationEvent($order->customer_id, $message));
+
         return response()->json(['message' => 'Kargo Resmi başarıyla güncellendi.'], 200);
     }
 

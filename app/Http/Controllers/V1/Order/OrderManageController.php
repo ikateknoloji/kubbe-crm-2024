@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\V1\Order;
 
+use App\Events\AdminNotificationEvent;
 use App\Events\CourierNotificationEvent;
 use App\Events\CustomerNotificationEvent;
 use App\Events\DesignerNotificationEvent;
@@ -62,11 +63,8 @@ class OrderManageController extends Controller
             'order' => $order];
 
             broadcast(new CustomerNotificationEvent($order->customer_id, $message));
-            broadcast(new DesignerNotificationEvent([
-                    'title' => 'Yeni Sipariş Oluşturuldu',
-                    'body' => 'Bir sipariş oluşturuldu.',
-                    'order' => $order,
-            ]));
+            
+            broadcast(new DesignerNotificationEvent($message));
             
             return response()->json(['message' => 'Sipariş tasarım aşamasına geçirildi.'], 200);
         }
@@ -98,7 +96,7 @@ class OrderManageController extends Controller
             ]);
 
             // Sipariş durumunu kontrol et, sadece 'DP' durumundakileri güncelle
-            if ($order->status === 'DP') { // 'DP' ile eşleştiğini kontrol et
+            if ($order->status === 'Tasarım Aşaması') { // 'DP' ile eşleştiğini kontrol et
 
                 $image = $request->file('design_image');
                 $imageName  = 'design_' . $order->id . '.' . $image->getClientOriginalExtension();
@@ -122,6 +120,13 @@ class OrderManageController extends Controller
 
                 // Sipariş durumunu 'DA' (Tasarım Onay) olarak güncelle
                 $order->update(['status' => 'DA', 'customer_read' => false]);
+
+                $message = [
+                'title' => 'Sipariş Tasarmı Eklendi',
+                'body' => 'Siparişiniz tasarımı oluşturuldu. Lütfen bir resim seçerek ödemeyi yapın.',
+                'order' => $order];
+
+                broadcast(new CustomerNotificationEvent($order->customer_id, $message));
 
                 return response()->json(['message' => 'Tasarım onaylandı ve kaydedildi.'], 200);
             } else {
@@ -150,7 +155,7 @@ class OrderManageController extends Controller
     {
         try {
             // Sipariş durumunu kontrol et, sadece 'DA' durumundakileri güncelle
-            if ($order->status === 'DA') { // 'DA' ile eşleştiğini kontrol et
+            if ($order->status === 'Tasarım Eklendi') { // 'DA' ile eşleştiğini kontrol et
             
                 $request->validate([
                     'payment_proof' => 'required|mimes:jpeg,png,jpg,gif,svg,pdf|max:10000',
@@ -185,7 +190,12 @@ class OrderManageController extends Controller
                 // Sipariş durumunu 'P' (Ödeme Onayı) olarak güncelle
                 $order->update(['status' => 'P', 'admin_read' => false]);
             
-            
+                broadcast(new AdminNotificationEvent([
+                    'title' => 'Ödeme Gerçekleştirildi',
+                    'body' => 'Lütfen Ödeme Kontrolü Yapın ve Ödeme onayı oluşturun.',
+                    'order' => $order,
+                ]));
+
                 return response()->json(['message' => 'Ödeme dosyası yüklendi ve Ödeme Onayı Bekliyor.'], 200);
             }
         
@@ -215,6 +225,12 @@ class OrderManageController extends Controller
             // Ödeme durumunu 'PA' (Ödeme Onaylandı) olarak güncelle
             $order->update(['status' => 'PA', 'customer_read' => false]);
 
+            $message = [
+            'title' => 'Ödeme Onaylandı.',
+            'body' => 'Ödemeniz onaylandı artık ürünüz üretim aşamasına geçebilir.',
+            'order' => $order];
+
+            broadcast(new CustomerNotificationEvent($order->customer_id, $message));
             return response()->json(['message' => 'Ödeme doğrulandı.'], 200);
         }
 
@@ -260,11 +276,11 @@ class OrderManageController extends Controller
             ]);
 
             $message = [
-            'title' => 'Sipariş Onaylandı',
-            'body' => 'Siparişiniz tasarım aşamasına geçildi.',
+            'title' => 'Yeni bir Siparişiniz var.',
+            'body' => 'Siparişinizi belirtilen tarihler arasında hazır hale getirin.',
             'order' => $order];
 
-                broadcast(new ManufacturerNotificationEvent($request->input('manufacturer_id'), $message));
+            broadcast(new ManufacturerNotificationEvent($request->input('manufacturer_id'), $message));
 
 
             return response()->json(['message' => 'Üretici seçimi yapıldı.'], 200);
@@ -305,6 +321,11 @@ class OrderManageController extends Controller
             $order->update(['status' => 'PP', 'admin_read' => false]);
 
             // ? Bildirim mesajını döndürür
+            broadcast(new AdminNotificationEvent([
+                'title' => 'Sipariş üretime başlandı.',
+                'body' => 'Sipariş üretime hazır olduğunda gerekli bilgiler size üretilecek.',
+                'order' => $order,
+            ]));
 
             return response()->json(['message' => 'Üretim süreci başlatıldı.'], 200);
         }   
@@ -369,10 +390,23 @@ class OrderManageController extends Controller
                 ]);
             
                 broadcast(new CourierNotificationEvent([
-                    'title' => 'Yeni Sipariş Oluşturuldu',
-                    'body' => 'Bir sipariş oluşturuldu.',
+                    'title' => 'Sipariş Hazır',
+                    'body' => 'Ürün hazır teslim alabilirsiniz.',
                     'order' => $order,
                 ]));
+
+                // ? Bildirim mesajını döndürür
+                broadcast(new AdminNotificationEvent([
+                    'title' => 'Sipariş Hazır',
+                    'body' => 'Ürün hazır kargo bölümü ürünü teslim alabilir.',
+                    'order' => $order,
+                ]));
+
+                broadcast((new CustomerNotificationEvent($order->customer_id, [
+                    'title' => 'Sipariş Hazır',
+                    'body' => 'Siparişin resmini görüntüleyebilirsiniz.',
+                    'order' => $order,
+                ])));
 
                 return response()->json(['message' => 'Ürün hazırlandı ve kaydedildi.'], 200);
             }
@@ -440,6 +474,20 @@ class OrderManageController extends Controller
                 ]);
                 
 
+
+                // ? Bildirim mesajını döndürür
+                broadcast(new AdminNotificationEvent([
+                    'title' => 'Sipariş Kargoya verildi.',
+                    'body' => 'Ürün kargoya verildi. Kargo kodunu indirmek için sipariş sayfasına ziyaret edin.',
+                    'order' => $order,
+                ]));
+
+                broadcast((new CustomerNotificationEvent($order->customer_id, [
+                    'title' => 'Sipariş Kargoya verildi.',
+                    'body' => 'Ürün kargoya verildi. Kargo kodunu indirmek için siparişinizin sayfasını ziyaret edebilirsiniz.',
+                    'order' => $order,
+                ])));
+
                 return response()->json(['message' => 'Kargo resim eklendi.'], 200);
             }
         
@@ -496,7 +544,13 @@ class OrderManageController extends Controller
         ]);
     
         $order->orderImages()->save($orderImage);
-    
+
+        broadcast((new CustomerNotificationEvent($order->customer_id, [
+            'title' => 'Fatura bilgileriniz Eklendi.',
+            'body' => 'Fatura bilgileriniz eklendi. Fatura dosyasını indirmek için siparişinizin sayfasını ziyaret edebilirsiniz.',
+            'order' => $order,
+        ])));
+
         return response()->json(['message' => 'Fatura resmi başarıyla yüklendi.'], 200);
     }
 }
