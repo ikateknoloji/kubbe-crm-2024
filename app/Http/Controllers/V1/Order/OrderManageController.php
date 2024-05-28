@@ -432,7 +432,7 @@ class OrderManageController extends Controller
     {
         try {
             // Sipariş durumunu kontrol et, sadece 'PR' durumundakileri güncelle
-            if ($order->status === 'PR') { // 'PR' ile eşleştiğini kontrol et
+            if ($order->status === 'Ürün Hazır') { // 'PR' ile eşleştiğini kontrol et
             
                 // Gelen resim dosyasını kontrol et
                 $request->validate([

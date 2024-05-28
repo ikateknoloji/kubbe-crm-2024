@@ -11,6 +11,7 @@ use App\Models\DesingerNotification;
 use App\Models\ManufacturerNotification;
 use App\Models\UserNotification;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class NotificationController extends Controller
 {
@@ -21,11 +22,14 @@ class NotificationController extends Controller
      */
     public function getAdminNotifications(Request $request)
     {
-        $notifications = AdminNotification::orderBy('created_at', 'desc')
+        $oneWeekAgo = Carbon::now()->subWeek();
+
+        $notifications = AdminNotification::where('created_at', '>=', $oneWeekAgo)
+                                          ->orderByRaw('is_read ASC, created_at DESC')
                                           ->paginate(10);
 
-        $unreadCount = AdminNotification::where('is_read', 0)->count();
-        
+        $unreadCount = AdminNotification::where('is_read', 'false')->count();
+
         $response = $notifications->toArray();
         $response['unread_count'] = $unreadCount;
 
@@ -39,11 +43,14 @@ class NotificationController extends Controller
      */
     public function getCourierNotifications(Request $request)
     {
-        $notifications = CourierNotification::orderBy('created_at', 'desc')
+        $oneWeekAgo = Carbon::now()->subWeek();
+
+        $notifications = CourierNotification::where('created_at', '>=', $oneWeekAgo)
+                                            ->orderByRaw('is_read ASC, created_at DESC')
                                             ->paginate(10);
 
-        $unreadCount = CourierNotification::where('is_read', 0)->count();
-        
+        $unreadCount = CourierNotification::where('is_read', 'false')->count();
+
         $response = $notifications->toArray();
         $response['unread_count'] = $unreadCount;
 
@@ -57,10 +64,13 @@ class NotificationController extends Controller
      */
     public function getDesignerNotifications(Request $request)
     {
-        $notifications = DesingerNotification::orderBy('created_at', 'desc')
+        $oneWeekAgo = Carbon::now()->subWeek();
+
+        $notifications = DesingerNotification::where('created_at', '>=', $oneWeekAgo)
+                                             ->orderByRaw('is_read ASC, created_at DESC')
                                              ->paginate(10);
-        
-        $unreadCount = DesingerNotification::where('is_read', 0)->count();
+
+        $unreadCount = DesingerNotification::where('is_read', 'false')->count();
 
         $response = $notifications->toArray();
         $response['unread_count'] = $unreadCount;
@@ -76,13 +86,17 @@ class NotificationController extends Controller
     public function getUserNotifications(Request $request)
     {
         $user_id = Auth::id();
+        $oneWeekAgo = Carbon::now()->subWeek();
 
         $notifications = UserNotification::where('user_id', $user_id)
-                                         ->orderBy('created_at', 'desc')
+                                         ->where('created_at', '>=', $oneWeekAgo)
+                                         ->orderByRaw('is_read ASC, created_at DESC')
                                          ->paginate(10);
-                                         
-        $unreadCount = UserNotification::where('user_id', $user_id)->where('is_read', 0)->count();
-        
+
+        $unreadCount = UserNotification::where('user_id', $user_id)
+                                       ->where('is_read', 'false')
+                                       ->count();
+
         $response = $notifications->toArray();
         $response['unread_count'] = $unreadCount;
 
@@ -90,23 +104,28 @@ class NotificationController extends Controller
     }
 
     /**
-     * Display a paginated listing of user notifications, ordered by creation date and unread status.
+     * Display a paginated listing of manufacturer notifications, ordered by creation date and unread status.
      *
      * @return \Illuminate\Http\Response
      */
     public function getManufacturerNotifications(Request $request)
     {
         $user_id = Auth::id();
+        $oneWeekAgo = Carbon::now()->subWeek();
 
         $notifications = ManufacturerNotification::where('user_id', $user_id)
-                                         ->orderBy('created_at', 'desc')
-                                         ->paginate(10);
-                                         
-        $unreadCount = ManufacturerNotification::where('user_id', $user_id)->where('is_read', 0)->count();
-        
+                                                 ->where('created_at', '>=', $oneWeekAgo)
+                                                 ->orderByRaw('is_read ASC, created_at DESC')
+                                                 ->paginate(10);
+
+        $unreadCount = ManufacturerNotification::where('user_id', $user_id)
+                                               ->where('is_read', 'false')
+                                               ->count();
+
         $response = $notifications->toArray();
         $response['unread_count'] = $unreadCount;
 
         return response()->json($response);
     }
+
 }
