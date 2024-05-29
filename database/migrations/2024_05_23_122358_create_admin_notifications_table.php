@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('admin_notifications', function (Blueprint $table) {
             $table->id();
             $table->json('message');
-            $table->string('is_read')->default('false');
+            $table->boolean('is_read')->default(false);
             $table->timestamps();
         });
     }
