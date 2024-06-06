@@ -299,3 +299,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/user/{id}/read', [NotificationReadController::class, 'markUserNotificationAsRead']);
     Route::post('/notifications/manufacturer/{id}/read', [NotificationReadController::class, 'markManufacturerNotificationAsRead']);
 });
+
+Route::get('/customer-orders/{customerId}', [HistoryOrderController::class, 'getCustomerOrdersWithCosts']);
+Route::get('/manufacturer-orders/{manufacturerId}/quantities', [HistoryOrderController::class, 'getManufacturerOrdersQuantities']);
+Route::get('/monthly-orders', [HistoryOrderController::class, 'getMonthlyOrderInfo']);
+
+Route::post('/orders/pdf/{customerId}', [HistoryOrderController::class, 'getCustomerOrderPDF']);
