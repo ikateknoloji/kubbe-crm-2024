@@ -436,12 +436,12 @@ class OrderManageController extends Controller
             
                 // Gelen resim dosyasını kontrol et
                 $request->validate([
-                    'product_in_transition_image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+                    'product_in_transition_image' => 'required|image|mimes:jpeg,png,jpg,gif,svg|max:50000',
                 ], [
                     'product_in_transition_image.required' => 'Ürün geçiş resmi gereklidir.',
                     'product_in_transition_image.image' => 'Dosya bir resim olmalıdır.',
                     'product_in_transition_image.mimes' => 'Dosya formatı jpeg, png, jpg, gif veya svg olmalıdır.',
-                    'product_in_transition_image.max' => 'Dosya boyutu maksimum 2048 kilobayt olmalıdır.',
+                    'product_in_transition_image.max' => 'Dosya boyutu maksimum 50000 kilobayt olmalıdır.',
                 ]);
             
                 // Resim dosyasını yükle ve bilgileri al
@@ -506,7 +506,7 @@ class OrderManageController extends Controller
     public function addBill(Request $request, Order $order) : JsonResponse
     {
         $rules = [
-            'bill_image' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf|max:8000',
+            'bill_image' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf|max:10000',
         ];
     
         $messages = [
