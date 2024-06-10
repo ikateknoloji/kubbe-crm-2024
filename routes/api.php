@@ -244,7 +244,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
  Route::middleware('check.single.role:kurye')->group(function () {
      // Ürünün Kargo Aşamasında Olduğunu Belirtme ve Resim Ekleme rotası
-     Route::post('/orders/{order}/mark-product-in-transition', [OrderManageController::class, 'markProductInTransition']);
+     Route::post('/order/mark-product-in-transition/{order}', [OrderManageController::class, 'markProductInTransition']);
  });
 
 });
@@ -254,7 +254,7 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
- Route::middleware(['check.single.role:admin', 'check.single.role:musteri'])->group(function () {
+ Route::middleware(['check.single.role:admin', 'check.single.role:musteri','check.single.role:kurye'])->group(function () {
     // 'update-logo-image/{orderId}' rotasını tanımlayın
     Route::post('/update-logo-image/{orderId}', [UpdateOrderController::class, 'updateLogoImage']);
     // 'update-design/{order}' rotasını tanımlayın
@@ -305,3 +305,8 @@ Route::get('/manufacturer-orders/{manufacturerId}/quantities', [HistoryOrderCont
 Route::get('/monthly-orders', [HistoryOrderController::class, 'getMonthlyOrderInfo']);
 
 Route::post('/orders/pdf/{customerId}', [HistoryOrderController::class, 'getCustomerOrderPDF']);
+
+Route::get('/check-curl', function () {
+    $curl_version = curl_version();
+    return response()->json($curl_version);
+});
