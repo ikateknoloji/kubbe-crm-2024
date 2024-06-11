@@ -157,6 +157,7 @@ class GetOrderController extends Controller
             'customerInfo',
             'invoiceInfo',
             'orderAddress',
+            'designImages',
             'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'  
         ])->find($id);
     
@@ -219,6 +220,7 @@ class GetOrderController extends Controller
             'customerInfo',
             'invoiceInfo',
             'orderAddress',
+            'designImages',
             'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'  
         ])->find($id);
     
@@ -281,7 +283,7 @@ class GetOrderController extends Controller
             'customerInfo',
             'invoiceInfo',
             'orderAddress',
-            'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'  
+            'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'
         ])->find($id);
     
         // Check if the order is null before proceeding
@@ -669,7 +671,7 @@ class GetOrderController extends Controller
         return response()->json(['orders' => $orders]);
     }
 
-        /**
+    /**
     * Belirtilen 'id' değerine sahip tekil siparişi getirir.
     * Ancak, siparişin 'manufacturer_id' değeri, Auth bilgileri ile aynı olmalıdır.
     *
@@ -697,6 +699,7 @@ class GetOrderController extends Controller
             'customerInfo',
             'invoiceInfo',
             'orderAddress',
+            'designImages',
             'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'  
         ])->find($id);
     
@@ -783,7 +786,7 @@ class GetOrderController extends Controller
         return response()->json(['order' => $order], 200);
     }
 
-        /**
+    /**
      * Aktif durumda olan ve teslim edilmemiş siparişleri getirir.
      *
      * @return JsonResponse
@@ -819,7 +822,7 @@ class GetOrderController extends Controller
 
         return response()->json(['orders' => $orders]);
     }
-            /**
+    /**
      * Aktif durumda olan ve teslim edilmemiş siparişleri getirir.
      *
      * @return JsonResponse

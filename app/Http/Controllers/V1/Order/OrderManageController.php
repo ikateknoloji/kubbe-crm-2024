@@ -8,6 +8,7 @@ use App\Events\CustomerNotificationEvent;
 use App\Events\DesignerNotificationEvent;
 use App\Events\ManufacturerNotificationEvent;
 use App\Http\Controllers\Controller;
+use App\Models\DesignImage;
 use App\Models\ManufacturerNotification;
 use Illuminate\Http\Request;
 use App\Models\Order;
@@ -86,68 +87,90 @@ class OrderManageController extends Controller
     public function approveDesign(Request $request, Order $order)
     {
         try {
-            // Gelen resim dosyasını kontrol et
+            // Gelen resim dosyasını ve dosya dizisini kontrol et
             $request->validate([
                 'design_image' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf',
+                'design_images' => 'required|array',
+                'design_images.*' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf',
             ], [
                 'design_image.required' => 'Lütfen bir tasarım resmi yükleyin.',
                 'design_image.file' => 'Dosya bir resim dosyası olmalıdır.',
                 'design_image.mimes' => 'Dosya formatı jpeg, png, jpg, gif, svg veya pdf olmalıdır.',
+                'design_images.required' => 'Lütfen en az bir tasarım resmi yükleyin.',
+                'design_images.*.required' => 'Lütfen bir tasarım resmi yükleyin.',
+                'design_images.*.file' => 'Dosya bir resim dosyası olmalıdır.',
+                'design_images.*.mimes' => 'Dosya formatı jpeg, png, jpg, gif, svg veya pdf olmalıdır.',
             ]);
-
+        
             // Sipariş durumunu kontrol et, sadece 'DP' durumundakileri güncelle
-            if ($order->status === 'Tasarım Aşaması') { // 'DP' ile eşleştiğini kontrol et
-
+            if ($order->status === 'Tasarım Aşaması') { // 'Tasarım Aşaması' ifadesi yerine 'DP' durumu kullanıldı
+            
+                // Tek bir design_image dosyasını yükle ve kaydet
                 $image = $request->file('design_image');
-                $imageName  = 'design_' . $order->id . '.' . $image->getClientOriginalExtension();
+                $imageName  = 'design_' . $order->id . '_single.' . $image->getClientOriginalExtension();
                 $filepath = $image->storeAs('public/designs', $imageName);
-
+            
                 // URL oluştur
-                $productImageUrl = Storage::url($filepath);
-
-                // MIME tipini al
+                $designPath = Storage::url($filepath);
+            
                 $mime_type = $image->getClientMimeType();
 
                 // OrderImage modeline order_id'yi ekleyerek kaydet
                 $orderImage = new OrderImage([
                     'type' => 'D', // Tasarım tipi
-                    'product_image' => $productImageUrl,
-                    'mime_type' => $mime_type, // MIME tipini kaydet
+                    'product_image' => $designPath,
                     'order_id' => $order->id,
+                    'mime_type' => $mime_type,
                 ]);
-
+                
                 $orderImage->save();
-
+            
+                // design_images arrayındaki her bir dosyayı yükle ve kaydet
+                collect($request->file('design_images'))->each(function ($image) use ($order) {
+                    $imageName  = 'design_' . $order->id . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                    $filepath = $image->storeAs('public/designs_files', $imageName);
+                
+                    // URL oluştur
+                    $designPath = Storage::url($filepath);
+                
+                    // DesignImage modeline order_id'yi ekleyerek kaydet
+                    $designImage = new DesignImage([
+                        'design_path' => $designPath,
+                        'order_id' => $order->id,
+                    ]);
+                    $designImage->save();
+                });
+            
                 // Sipariş durumunu 'DA' (Tasarım Onay) olarak güncelle
                 $order->update(['status' => 'DA', 'customer_read' => false]);
-
+            
                 $message = [
-                'title' => 'Sipariş Tasarmı Eklendi',
-                'body' => 'Siparişiniz tasarımı oluşturuldu. Lütfen bir resim seçerek ödemeyi yapın.',
-                'order' => $order];
-
+                    'title' => 'Sipariş Tasarımı Eklendi',
+                    'body' => 'Siparişiniz tasarımı oluşturuldu. Lütfen bir resim seçerek ödemeyi yapın.',
+                    'order' => $order
+                ];
+            
                 broadcast(new CustomerNotificationEvent($order->customer_id, $message));
-
+            
                 return response()->json(['message' => 'Tasarım onaylandı ve kaydedildi.'], 200);
             } else {
                 return response()->json(['message' => 'Sipariş durumu tasarım aşamasında değil.'], 400);
             }
         } catch (\Illuminate\Validation\ValidationException $e) {
-
             $firstErrorMessage = head($e->validator->errors()->all());
-
             return response()->json(['error' => $firstErrorMessage], 422);
         }
     }
 
     /**
      * Tasarım Onayını ve Ödemeyi Gerçekleştir.
-     * @param \App\Models\Order $order
      * @param \Illuminate\Http\Request $request
+     * @param \App\Models\Order $order
      * @return mixed|\Illuminate\Http\JsonResponse
      * Örnek İstek Yapısı
      * @POST 
      * {
+     *   "image_id": 2,
      *   "payment_proof": "image.jpg"
      *  }
      */
@@ -155,58 +178,65 @@ class OrderManageController extends Controller
     {
         try {
             // Sipariş durumunu kontrol et, sadece 'DA' durumundakileri güncelle
-            if ($order->status === 'Tasarım Eklendi') { // 'DA' ile eşleştiğini kontrol et
-            
-                $request->validate([
-                    'payment_proof' => 'required|mimes:jpeg,png,jpg,gif,svg,pdf|max:10000',
-                ], [
-                    'payment_proof.required' => 'Ödeme kanıtı dosyası gereklidir.',
-                    'payment_proof.mimes' => 'Dosya formatı jpeg, png, jpg, gif, svg veya pdf olmalıdır.',
-                    'payment_proof.max' => 'Dosya boyutu maksimum 10000 kilobayt olmalıdır.',
-                ]);
-            
-                // Resim dosyasını yükle ve bilgileri al
-                $file = $request->file('payment_proof');
-                $imageName = 'payment_' . $order->id . '.' . $file->getClientOriginalExtension();
-                $filepath = $file->storeAs('public/payments', $imageName);
-            
-                // URL oluştur
-                $productImageUrl = Storage::url($filepath);
-            
-                // MIME tipini al
-                $mime_type = $file->getClientMimeType();
-            
-                // OrderImage modeline order_id'yi ekleyerek kaydet
-                $orderImage = new OrderImage([
-                    'type' => 'P',
-                    'mime_type' => $mime_type,
-                    'product_image' => $productImageUrl, // Burada uygun bir değer sağlayın
-                    'order_id' => $order->id,
-                ]);
-            
-                // OrderImage modelini veritabanına kaydet
-                $orderImage->save();
-            
-                // Sipariş durumunu 'P' (Ödeme Onayı) olarak güncelle
-                $order->update(['status' => 'P', 'admin_read' => false]);
-            
-                broadcast(new AdminNotificationEvent([
-                    'title' => 'Ödeme Gerçekleştirildi',
-                    'body' => 'Lütfen Ödeme Kontrolü Yapın ve Ödeme onayı oluşturun.',
-                    'order' => $order,
-                ]));
-
-                return response()->json(['message' => 'Ödeme dosyası yüklendi ve Ödeme Onayı Bekliyor.'], 200);
-            }
+        if ($order->status === 'Tasarım Eklendi') { // 'DA' ile eşleştiğini kontrol et
         
-            return response()->json(['error' => 'Sipariş durumu ' . $order->status . ' olduğu için işlem gerçekleştirilemiyor.'], 400);
+            $request->validate([
+                'image_id' => 'required|exists:design_images,id',
+                'payment_proof' => 'required|mimes:jpeg,png,jpg,gif,svg,pdf|max:10000',
+            ], [
+                'image_id.required' => 'Resim ID gereklidir.',
+                'image_id.exists' => 'Seçilen resim mevcut değil.',
+                'payment_proof.required' => 'Ödeme kanıtı dosyası gereklidir.',
+                'payment_proof.mimes' => 'Dosya formatı jpeg, png, jpg, gif, svg veya pdf olmalıdır.',
+                'payment_proof.max' => 'Dosya boyutu maksimum 10000 kilobayt olmalıdır.',
+            ]);
+        
+            // Resim dosyasını yükle ve bilgileri al
+            $file = $request->file('payment_proof');
+            $imageName = 'payment_' . $order->id . '.' . $file->getClientOriginalExtension();
+            $filepath = $file->storeAs('public/payments', $imageName);
+        
+            // URL oluştur
+            $productImageUrl = Storage::url($filepath);
+        
+            // MIME tipini al
+            $mime_type = $file->getClientMimeType();
+        
+            // OrderImage modeline order_id'yi ekleyerek kaydet
+            $orderImage = new OrderImage([
+                'type' => 'P',
+                'mime_type' => $mime_type,
+                'product_image' => $productImageUrl,
+                'order_id' => $order->id,
+            ]);
+        
+            // OrderImage modelini veritabanına kaydet
+            $orderImage->save();
+        
+            // Sipariş durumunu 'P' (Ödeme Onayı) olarak güncelle
+            $order->update(['status' => 'P', 'admin_read' => false]);
+            
+            // DesignImages tablosundaki ilgili kaydı güncelle
+            DesignImage::where('order_id', $order->id)->update(['is_selected' => false]);
+            DesignImage::where('id', $request->input('image_id'))->update(['is_selected' => true]);
+        
+            broadcast(new AdminNotificationEvent([
+                'title' => 'Ödeme Gerçekleştirildi',
+                'body' => 'Lütfen Ödeme Kontrolü Yapın ve Ödeme onayı oluşturun.',
+                'order' => $order,
+            ]));
+
+            return response()->json(['message' => 'Ödeme dosyası yüklendi ve Ödeme Onayı Bekliyor.'], 200);
+        }
+    
+        return response()->json(['error' => 'Sipariş durumu ' . $order->status . ' olduğu için işlem gerçekleştirilemiyor.'], 400);
         
         } catch (\Illuminate\Validation\ValidationException $e) {
             return response()->json(['errors' => $e->errors()], 422);
         }
     }
 
-        /**
+    /**
      * Ödemeyi Doğrula.
      * ? admin
      * @param \App\Models\Order $order

@@ -236,4 +236,9 @@ class Order extends Model
         return $this->hasOne(OrderImage::class)->where('type', 'L');
     }
 
+    public function designImages()
+    {
+        return $this->hasMany(DesignImage::class, 'order_id');
+    }
+
 }

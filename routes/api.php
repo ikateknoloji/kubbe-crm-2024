@@ -232,7 +232,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
  Route::middleware('check.single.role:tasarimci')->group(function () {
     // Ödeme Onayını ve İlerlemeyi Gerçekleştirme rotası
-    Route::post('/orders/{order}/approve-design', [OrderManageController::class, 'approveDesign']);
+   // Route::post('/orders/{order}/approve-design', [OrderManageController::class, 'approveDesign']);
  });
 
  Route::middleware('check.single.role:uretici')->group(function () {
@@ -306,7 +306,5 @@ Route::get('/monthly-orders', [HistoryOrderController::class, 'getMonthlyOrderIn
 
 Route::post('/orders/pdf/{customerId}', [HistoryOrderController::class, 'getCustomerOrderPDF']);
 
-Route::get('/check-curl', function () {
-    $curl_version = curl_version();
-    return response()->json($curl_version);
-});
+
+Route::post('/approve-design/{order}', [OrderManageController::class, 'approveDesign']);
