@@ -127,6 +127,9 @@ Route::middleware('check.single.role:tasarimci')->group(function () {
     Route::get('/desinger/orders/{id}', [GetOrderController::class, 'getOrderByIdForDesinger']);
     // Arama İşlemlerini yapma
     Route::get('/desinger/search', [GetOrderController::class, 'desingerSearch']);
+    // Üretim Tasarımı Ekleme
+    Route::get('/production-stage-p', [GetOrderController::class, 'getProductionStagePOrders']);
+
 });
 
 /** Kurye sipariş görüntüleme rotasıları. **/
@@ -233,6 +236,10 @@ Route::middleware('auth:sanctum')->group(function () {
  Route::middleware('check.single.role:tasarimci')->group(function () {
     // Ödeme Onayını ve İlerlemeyi Gerçekleştirme rotası
    // Route::post('/orders/{order}/approve-design', [OrderManageController::class, 'approveDesign']);
+   Route::post('/upload-production-image/{order}', [OrderManageController::class, 'uploadProductionImage']);
+   Route::post('/approve-design/{order}', [OrderManageController::class, 'approveDesign']);
+    // 'update-design/{order}' rotasını tanımlayın
+    Route::post('/update-design/{order}', [UpdateOrderController::class, 'updateDesign']);
  });
 
  Route::middleware('check.single.role:uretici')->group(function () {
@@ -257,14 +264,11 @@ Route::middleware('auth:sanctum')->group(function () {
  Route::middleware(['check.single.role:admin', 'check.single.role:musteri','check.single.role:kurye'])->group(function () {
     // 'update-logo-image/{orderId}' rotasını tanımlayın
     Route::post('/update-logo-image/{orderId}', [UpdateOrderController::class, 'updateLogoImage']);
-    // 'update-design/{order}' rotasını tanımlayın
-    Route::post('/update-design/{order}', [UpdateOrderController::class, 'updateDesign']);
+
     // 'update-customer-info/{orderId}' rotasını tanımlayın
     Route::post('/update-customer-info/{orderId}', [UpdateOrderController::class, 'updateCustomerInfo']);
     // 'update-logo-image/{orderId}' rotasını tanımlayın
     Route::post('/update-logo-image/{orderId}', [UpdateOrderController::class, 'updateLogoImage']);
-    // 'update-design/{order}' rotasını tanımlayın
-    Route::post('/update-design/{order}', [UpdateOrderController::class, 'updateDesign']);
     // 'update-customer-info/{orderId}' rotasını tanımlayın
     Route::post('/update-customer-info/{orderId}', [UpdateOrderController::class, 'updateCustomerInfo']);
     // 'update-order-address/{orderId}' rotasını tanımlayın
@@ -305,6 +309,3 @@ Route::get('/manufacturer-orders/{manufacturerId}/quantities', [HistoryOrderCont
 Route::get('/monthly-orders', [HistoryOrderController::class, 'getMonthlyOrderInfo']);
 
 Route::post('/orders/pdf/{customerId}', [HistoryOrderController::class, 'getCustomerOrderPDF']);
-
-
-Route::post('/approve-design/{order}', [OrderManageController::class, 'approveDesign']);

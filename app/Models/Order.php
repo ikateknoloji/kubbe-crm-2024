@@ -33,6 +33,7 @@ class Order extends Model
         'admin_read',
         'customer_read',
         'manufacturer_read',
+        'production_stage'
     ];
 
     // Siparişe ek olarak bu bilgileri 
@@ -170,9 +171,9 @@ class Order extends Model
     /**
      * Bu siparişin resimleri getirir.
      */
-    public function orderImages() : HasMany
+    public function orderImages(): HasMany
     {
-      return $this->hasMany(OrderImage::class, 'order_id');
+        return $this->hasMany(OrderImage::class, 'order_id');
     }
 
     /**
@@ -240,5 +241,9 @@ class Order extends Model
     {
         return $this->hasMany(DesignImage::class, 'order_id');
     }
-
+    
+    public function productionImages(): HasMany
+    {
+        return $this->hasMany(ProductionImage::class, 'order_id');
+    }
 }

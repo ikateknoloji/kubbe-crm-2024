@@ -8,6 +8,7 @@ use App\Events\CustomerNotificationEvent;
 use App\Events\DesignerNotificationEvent;
 use App\Events\ManufacturerNotificationEvent;
 use App\Http\Controllers\Controller;
+use App\Models\DesignImage;
 use Illuminate\Http\Request;
 use App\Models\Order;
 use App\Models\OrderAddress;
@@ -113,26 +114,29 @@ class UpdateOrderController extends Controller
      */
     public function updateDesign(Request $request, Order $order)
     {
-        // Doğrulama kuralları
-        $validator = Validator::make($request->all(), [
-            'design_image' => 'required|file|mimes:pdf,jpeg,png,jpg,gif,svg|max:10048',
-        ], [
-            'design_image.required' => 'Lütfen bir tasarım resmi yükleyin.',
-            'design_image.file' => 'Dosya bir resim olmalıdır.',
-            'design_image.mimes' => 'Dosya formatı jpeg, png, jpg, gif veya svg olmalıdır.',
-        ]);
-    
-        // Doğrulama hatası varsa, ilk hatayı döndür
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()->first()], 422);
-        }
-    
-        // Mevcut tasarım resmini bul
-        $currentDesign = $order->orderImages()->where('type', 'D')->first();
-    
-        // Eski tasarım resmini sil ve mevcut kaydı güncelle
-        if ($currentDesign) {
-            Storage::delete($currentDesign->product_image);
+        try {
+            // Doğrulama kuralları
+            $validator = Validator::make($request->all(), [
+                'design_image' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf|max:10048',
+                'design_images' => 'sometimes|array',
+                'design_images.*' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf|max:10048',
+            ], [
+                'design_image.required' => 'Lütfen bir tasarım resmi yükleyin.',
+                'design_image.file' => 'Dosya bir resim olmalıdır.',
+                'design_image.mimes' => 'Dosya formatı jpeg, png, jpg, gif veya svg olmalıdır.',
+                'design_images.required' => 'Lütfen en az bir tasarım resmi yükleyin.',
+                'design_images.*.required' => 'Lütfen bir tasarım resmi yükleyin.',
+                'design_images.*.file' => 'Dosya bir resim dosyası olmalıdır.',
+                'design_images.*.mimes' => 'Dosya formatı jpeg, png, jpg, gif veya svg olmalıdır.',
+            ]);
+        
+            // Doğrulama hatası varsa, ilk hatayı döndür
+            if ($validator->fails()) {
+                return response()->json(['error' => $validator->errors()->first()], 422);
+            }
+        
+            // Mevcut tasarım resmini bul
+            $currentDesign = $order->orderImages()->where('type', 'D')->first();
         
             // Yeni resim dosyasını yükle
             $image = $request->file('design_image');
@@ -140,40 +144,58 @@ class UpdateOrderController extends Controller
             $path = $image->storeAs('public/designs', $imageName);
         
             // URL oluştur
-            $productImageUrl = Storage::url($path);
+            $designPath = Storage::url($path);
         
-            $currentDesign->update([
-                'product_image' => $productImageUrl,
-                'mime_type' => $image->getClientMimeType(),
-            ]);
-        } else {
-            $image = $request->file('design_image');
-            $imageName = 'design_' . $order->id . '.' . $image->getClientOriginalExtension();
-            $path = $image->storeAs('public/designs', $imageName);
+            if ($currentDesign) {
+                // Eski tasarım resmini sil ve mevcut kaydı güncelle
+                if (!empty($currentDesign->design_path)) {
+                    Storage::delete($currentDesign->design_path);
+                }
+                $currentDesign->update([
+                    'design_path' => $designPath,
+                ]);
+            } else {
+                // Eğer mevcut resim yoksa, yeni bir OrderImage nesnesi oluştur ve kaydet
+                OrderImage::create([
+                    'order_id' => $order->id,
+                    'type' => 'D',
+                    'design_path' => $designPath,
+                ]);
+            }
         
-            // URL oluştur
-            $productImageUrl = Storage::url($path);
+            // design_images arrayındaki her bir dosyayı yükle ve kaydet (isteğe bağlı)
+            if ($request->hasFile('design_images')) {
+                collect($request->file('design_images'))->each(function ($image) use ($order) {
+                    $imageName  = 'design_' . $order->id . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
+                    $filepath = $image->storeAs('public/designs_files', $imageName);
+                
+                    // URL oluştur
+                    $designPath = Storage::url($filepath);
+                
+                    // DesignImage modeline order_id'yi ekleyerek kaydet
+                    DesignImage::create([
+                        'design_path' => $designPath,
+                        'order_id' => $order->id,
+                    ]);
+                });
+            }
         
-            // Eğer mevcut resim yoksa, yeni bir OrderImage nesnesi oluştur ve kaydet
-            OrderImage::create([
-                'order_id' => $order->id,
-                'type' => 'D',
-                'product_image' => $productImageUrl,
-                'mime_type' => $image->getClientMimeType(),
-            ]);
+            $message = [
+                'title' => 'Tasarım resmi güncellendi.',
+                'body' => 'Tasarım resmi güncellendi lütfen tasarım resmini müşterinizle paylaşın.',
+                'order' => $order
+            ];
+        
+            // Bildirimi yayınla
+            broadcast(new CustomerNotificationEvent($order->customer_id, $message));
+        
+            return response()->json(['message' => 'Tasarım başarıyla güncellendi.'], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Bir hata oluştu: ' . $e->getMessage()], 500);
         }
-    
-        $message = [
-            'title' => 'Tasarım resmi güncellendi.',
-            'body' => 'Tasarım resmi güncellendi lütfen tasarım resmini müşterinizle paylaşın.',
-            'order' => $order
-        ];
-        
-        // Bildirimi yayınla
-        broadcast(new CustomerNotificationEvent($order->customer_id, $message));
-
-        return response()->json(['message' => 'Tasarım başarıyla güncellendi.'], 200);
     }
+
+
 
     /**
      * Belirli bir siparişe bağlı müşteri bilgisinin detaylarını günceller.

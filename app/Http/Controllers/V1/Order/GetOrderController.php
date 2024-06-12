@@ -1134,4 +1134,29 @@ class GetOrderController extends Controller
         // Sonuçları JSON olarak döndürün
         return response()->json(['orders' => $orders]);
     }
+
+    public function getProductionStagePOrders(): JsonResponse
+    {
+        $orders = Order::where('production_stage', 'P') // production_stage değeri 'P' olanları getir
+            ->whereNotIn('status', ['OC', 'DP']) // 'OC' ve 'DP' dışındaki durumları getir
+            ->where('is_rejected', 'A')
+            ->with([
+                'customer' => function ($query) {
+                    // İlgili müşteri bilgilerini getir
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'manufacturer' => function ($query) {
+                    // İlgili üretici bilgilerini getir
+                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'customerInfo', // customerInfo ilişkisini ekledik
+                'logoImage' => function ($query) {
+                    $query->select('id', 'order_id', 'product_image', 'type');
+                }  
+            ])
+            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->paginate(9);
+            
+        return response()->json(['orders' => $orders]);
+    }
 }

@@ -251,14 +251,15 @@ class OrderManageController extends Controller
     public function verifyPayment(Order $order)
     {
         // Sipariş durumunu kontrol et, sadece 'P' durumundakileri doğrula
-        if ($order->status === 'Ödeme Aşaması') {
+        if ($order->status === 'P') {
             // Ödeme durumunu 'PA' (Ödeme Onaylandı) olarak güncelle
-            $order->update(['status' => 'PA', 'customer_read' => false]);
+            $order->update(['status' => 'PA', 'customer_read' => false, 'production_stage' => 'P']);
 
             $message = [
-            'title' => 'Ödeme Onaylandı.',
-            'body' => 'Ödemeniz onaylandı artık ürünüz üretim aşamasına geçebilir.',
-            'order' => $order];
+                'title' => 'Ödeme Onaylandı.',
+                'body' => 'Ödemeniz onaylandı artık ürünüz üretim aşamasına geçebilir.',
+                'order' => $order
+            ];
 
             broadcast(new CustomerNotificationEvent($order->customer_id, $message));
             return response()->json(['message' => 'Ödeme doğrulandı.'], 200);
@@ -266,7 +267,8 @@ class OrderManageController extends Controller
 
         return response()->json(['error' => 'Sipariş durumu ' . $order->status . ' olduğu için ödeme doğrulanamıyor.'], 400);
     }
-
+    
+    
     /**
      * Üretici Seçimi İşlemini Gerçekleştir.
      * ? admin
@@ -582,5 +584,46 @@ class OrderManageController extends Controller
         ])));
 
         return response()->json(['message' => 'Fatura resmi başarıyla yüklendi.'], 200);
+    }
+
+    /**
+     * Resim dosyasını yükle ve production_stage değerini güncelle.
+     * @param \App\Models\Order $order
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     * Örnek İstek Yapısı:
+     * @POST 
+     * {
+     *   "image": "file.jpg"
+     * }
+     */
+    public function uploadProductionImage(Request $request, Order $order)   
+    {
+        // Validasyon
+        $request->validate([
+            'image' => 'required|mimes:jpeg,png,jpg,gif,svg,pdf|max:40000',
+        ]);
+
+        DB::beginTransaction();
+
+        try {
+            // Dosyayı yükle
+            $imagePath = $request->file('image')->store('production_images', 'public');
+
+            // Veritabanına kaydet
+            $order->productionImages()->create([
+                'file_path' => $imagePath,
+            ]);
+
+            // production_stage değerini 'U' olarak güncelle
+            $order->update(['production_stage' => 'U']);
+
+            DB::commit();
+
+            return response()->json(['message' => 'Resim yüklendi ve üretim dosyası Eklendi.', 'file_path' => $imagePath], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json(['error' => 'Bir hata oluştu: ' . $e->getMessage()], 500);
+        }   
     }
 }
