@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            $table->enum('shipping_type', ['A', 'G', 'T'])->after('note')->nullable();
+            $table->enum('production_status', ['initial', 'in_progress', 'completed'])->default('initial');
         });
     }
 
@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('orders', function (Blueprint $table) {
-            //
+            $table->dropColumn('production_status');
         });
     }
 };

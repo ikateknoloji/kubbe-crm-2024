@@ -33,7 +33,8 @@ class Order extends Model
         'admin_read',
         'customer_read',
         'manufacturer_read',
-        'production_stage'
+        'production_stage',
+        'production_status'
     ];
 
     // Siparişe ek olarak bu bilgileri 

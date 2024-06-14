@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
-            $table->enum('shipping_type', ['A', 'G', 'T'])->after('note')->nullable();
+        Schema::table('production_images', function (Blueprint $table) {
+            $table->boolean('is_selected')->default(false); // Eklenen sütun
         });
     }
 
@@ -21,7 +21,7 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('orders', function (Blueprint $table) {
+        Schema::table('production_images', function (Blueprint $table) {
             //
         });
     }

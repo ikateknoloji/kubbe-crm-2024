@@ -18,7 +18,6 @@ return new class extends Migration
             $table->string('address');
             $table->string('tax_office');
             $table->string('tax_number');
-            $table->string('email');
             $table->timestamps();
 
             $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');

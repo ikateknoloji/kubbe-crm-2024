@@ -18,7 +18,6 @@ class InvoiceInfo extends Model
         'address',
         'tax_office',
         'tax_number',
-        'email',
     ];
 
     public function order(): BelongsTo

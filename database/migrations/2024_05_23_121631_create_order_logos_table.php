@@ -11,15 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('order_images', function (Blueprint $table) {
+        Schema::create('order_logo', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('order_id');
-            $table->enum('type', ['D', 'P', 'I', 'PR', 'SC','PL']);
-            $table->string('product_image');
-            $table->string('mime_type');
+            $table->unsignedBigInteger('order_item_id');
+            $table->string('logo_path');
+            $table->foreign('order_item_id')->references('id')->on('order_items')->onDelete('cascade');
             $table->timestamps();
-
-            $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');
         });
     }
 
@@ -28,6 +25,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('order_images');
+        Schema::dropIfExists('order_logos');
     }
 };

@@ -16,7 +16,8 @@ class OrderItem extends Model
         'quantity',
         'color',
         'unit_price',
-        'type'
+        'type',
+        'order_logo_id',
     ];
 
     public function order() : BelongsTo
@@ -33,4 +34,10 @@ class OrderItem extends Model
     {
         return $this->belongsTo(ProductCategory::class);
     }
+
+    public function orderLogos()
+    {
+        return $this->hasMany(OrderLogo::class);
+    }
+
 }
