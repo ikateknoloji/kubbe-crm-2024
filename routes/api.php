@@ -129,7 +129,10 @@ Route::middleware('check.single.role:tasarimci')->group(function () {
     Route::get('/desinger/search', [GetOrderController::class, 'desingerSearch']);
     // Üretim Tasarımı Ekleme
     Route::get('/production-stage-p', [GetOrderController::class, 'getProductionStagePOrders']);
-
+    // Üretime gidecek siparişleri getir
+    Route::get('/production-status-orders', [GetOrderController::class, 'getProductionStatusOrders']);
+    // Üretime gidecek siparişleri getir
+    Route::get('/orders-production-update-status', [OrderManageController::class, 'updateProductionStatus']);
 });
 
 /** Kurye sipariş görüntüleme rotasıları. **/

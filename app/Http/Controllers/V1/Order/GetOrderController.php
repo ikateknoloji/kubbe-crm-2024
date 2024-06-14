@@ -1159,4 +1159,33 @@ class GetOrderController extends Controller
             
         return response()->json(['orders' => $orders]);
     }
+
+    public function getProductionStatusOrders(): JsonResponse
+    {
+        $orders = Order::where('production_status', 'in_progress') // production_status değeri 'in_progress' olanları getir
+            ->where('is_rejected', 'A')
+            ->with([
+                'customer' => function ($query) {
+                    // İlgili müşteri bilgilerini getir
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'manufacturer' => function ($query) {
+                    // İlgili üretici bilgilerini getir
+                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'customerInfo', // customerInfo ilişkisini ekledik
+                'logoImage' => function ($query) {
+                    $query->select('id', 'order_id', 'product_image', 'type');
+                },
+                'orderItems.productType',
+                'orderItems.productCategory',
+                'productionImages'
+                ,
+            ])
+            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->get(); // Tüm sonuçları getir
+            
+        return response()->json(['orders' => $orders]);
+    }
+
 }

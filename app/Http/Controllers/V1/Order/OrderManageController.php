@@ -217,8 +217,7 @@ class OrderManageController extends Controller
             $order->update(['status' => 'P', 'admin_read' => false]);
             
             // DesignImages tablosundaki ilgili kaydı güncelle
-            DesignImage::where('order_id', $order->id)->update(['is_selected' => false]);
-            DesignImage::where('id', $request->input('image_id'))->update(['is_selected' => true]);
+            DesignImage::where('id', $request->input('image_id'))->update(['is_selected' => 1]);
         
             broadcast(new AdminNotificationEvent([
                 'title' => 'Ödeme Gerçekleştirildi',
@@ -251,7 +250,7 @@ class OrderManageController extends Controller
     public function verifyPayment(Order $order)
     {
         // Sipariş durumunu kontrol et, sadece 'P' durumundakileri doğrula
-        if ($order->status === 'P') {
+        if ($order->status === 'Ödeme Aşaması') {
             // Ödeme durumunu 'PA' (Ödeme Onaylandı) olarak güncelle
             $order->update(['status' => 'PA', 'customer_read' => false, 'production_stage' => 'P']);
 
@@ -616,7 +615,7 @@ class OrderManageController extends Controller
             ]);
 
             // production_stage değerini 'U' olarak güncelle
-            $order->update(['production_stage' => 'U']);
+            $order->update(['production_stage' => 'U', 'production_status' => 'in_progress']);
 
             DB::commit();
 
@@ -625,5 +624,29 @@ class OrderManageController extends Controller
             DB::rollBack();
             return response()->json(['error' => 'Bir hata oluştu: ' . $e->getMessage()], 500);
         }   
+    }
+
+    /**
+     * Update the production status of orders to 'completed'.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Illuminate\Http\Response
+     */
+    public function updateProductionStatus(Request $request)
+    {
+        // Request içindeki verileri doğrula
+        $validatedData = $request->validate([
+            'order_ids' => 'required|array',
+            'order_ids.*' => 'required|exists:orders,id',
+        ]);
+
+        // Doğrulamadan geçen order_id'leri al
+        $orderIds = $validatedData['order_ids'];
+
+        // Order modelini kullanarak production_status'u 'completed' olarak güncelleme
+        Order::whereIn('id', $orderIds)->update(['production_status' => 'completed']);
+
+        // Başarılı yanıt döndür
+        return response()->json(['message' => 'Production status updated successfully'], 200);
     }
 }
