@@ -76,6 +76,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/validate-form', [StoreOrderController::class, 'validateForms']);
         // Form içeriklerinin validation işlemlerini yapıyoruz.
         Route::post('/validate-order-item', [StoreOrderController::class, 'validateOrderItem']);
+        // Sipariş Kalemi için validation işlemlerini yapıyoruz.
+        Route::post('/validate-order-item-single', [StoreOrderController::class, 'validateItem']);
+
     });
 });
 

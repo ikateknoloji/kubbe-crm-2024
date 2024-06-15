@@ -12,11 +12,16 @@ use App\Models\OrderImage;
 use App\Models\OrderItem;
 use App\Models\CustomerInfo;
 use App\Models\InvoiceInfo;
+use App\Models\OrderBasket;
+use App\Models\OrderLogo;
+use App\Rules\TurkishPhoneNumber;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class StoreOrderController extends Controller
 {
@@ -27,324 +32,411 @@ class StoreOrderController extends Controller
      * Örnek İstek Yapısı
      * @POST 
      * {
-     *   "order_name": "Sipariş Adı",
+     *   "customer": {
+     *     "name": "Name",
+     *     "surname": "Surname",
+     *     "phone": "Phone",
+     *     "email": "Email"
+     *   },
+     *   "order": {
+     *     "order_name": "Sipariş Adı",
+     *     "offer_price": 100,
+     *     "note": "Not"
+     *   },
+     *   "baskets": [
+     *     {
+     *       "items": [
+     *         {
+     *           "product_type_id": 1,
+     *           "product_category_id": 1,
+     *           "quantity": 1,
+     *           "color": "Black",
+     *           "unit_price": 100,
+     *           "type": "T"
+     *         }
+     *       ],
+     *       "logos": [
+     *         {
+     *           "logo_url": "image1.jpg"
+     *         },
+     *         {
+     *           "logo_url": "image2.jpg"
+     *         }
+     *       ]
+     *     },
+     *     {
+     *       "items": [
+     *         {
+     *           "product_type_id": 2,
+     *           "product_category_id": 1,
+     *           "quantity": 1,
+     *           "color": "Black",
+     *           "unit_price": 100,
+     *           "type": "T"
+     *         }
+     *       ],
+     *       "logos": [
+     *         {
+     *           "logo_url": "image3.jpg"
+     *         }
+     *       ]
+     *     }
+     *   ]
+     * }
+     */
+    public function createOrder(Request $request)
+    {
+        // Gelen verileri validate edin
+        $validatedData = $request->validate([
+            'customer.name' => 'required|string|max:255',
+            'customer.surname' => 'required|string|max:255',
+            'customer.phone' => 'required|string|max:15',
+            'customer.email' => 'required|string|email|max:255',
+            'order.order_name' => 'required|string|max:255',
+            'order.offer_price' => 'required|numeric',
+            'order.note' => 'nullable|string',
+            'baskets' => 'required|array',
+            'baskets.*.items' => 'required|array',
+            'baskets.*.items.*.product_type_id' => 'nullable|integer',
+            'baskets.*.items.*.product_category_id' => 'required|integer',
+            'baskets.*.items.*.quantity' => 'required|integer',
+            'baskets.*.items.*.color' => 'required|string|max:50',
+            'baskets.*.items.*.unit_price' => 'required|numeric',
+            'baskets.*.items.*.type' => 'nullable|string',
+            'baskets.*.logos' => 'required|array',
+            'baskets.*.logos.*.logo_url' => 'required|string|max:255',
+        ]);
+    
+        // Giriş yapmış kullanıcının kimliğini al
+        $customerId = Auth::id();
+    
+        // Order verilerini al ve customer_id'yi ekleyerek Order oluştur
+        $orderData = $validatedData['order'];
+        $orderData['customer_id'] = $customerId;  // customer_id ekleniyor
+        $order = Order::create($orderData);
+    
+        // CustomerInfo verilerini al ve order_id'yi ekleyerek CustomerInfo oluştur
+        $customerInfoData = $validatedData['customer'];
+        $customerInfoData['order_id'] = $order->id;  // order_id ekleniyor
+        $customerInfo = CustomerInfo::create($customerInfoData);
+    
+        // Her bir sepet için OrderBasket oluştur ve ilişkili verileri kaydet
+        foreach ($validatedData['baskets'] as $basketData) {
+            // Yeni OrderBasket oluştur ve order_id'yi ekleyerek kaydet
+            $orderBasket = new OrderBasket(['order_id' => $order->id]);
+            $orderBasket->save();
+        
+            // Her bir ürün için OrderItem oluştur ve order_basket_id'yi ekleyerek kaydet
+            foreach ($basketData['items'] as $itemData) {
+                $itemData['order_basket_id'] = $orderBasket->id; // order_basket_id ekleniyor
+                OrderItem::create($itemData);
+            }
+        
+            // Her bir logo için OrderLogo oluştur ve logo_path'ı kaydet
+            foreach ($basketData['logos'] as $logoData) {
+                $logoRecord = new OrderLogo([
+                    'order_basket_id' => $orderBasket->id, // order_basket_id ekleniyor
+                    'logo_path' => $logoData['logo_url']
+                ]);
+                $logoRecord->save();
+            }
+        }
+    
+        // Başarılı yanıt döndür
+        return response()->json([
+            'message' => 'Data created successfully',
+            'order' => $order,
+            'customer_info' => $customerInfo
+        ], 201);
+    }
+    /**
+     * Sipariş detaylarını oluştur ve güncelle.
+     * @param \Illuminate\Http\Request $request
+     * @param int $order_id
+     * @return \Illuminate\Http\JsonResponse
+     * Örnek İstek Yapısı
+     * @POST 
+     * {
+     *   "invoice_type": "C",
+     *   "shipping_type": "G",
+     *   "order_address": "Adres",
+     *   "company_name": "Şirket Adı",
+     *   "address": "Şirket Adresi",
+     *   "tax_office": "Vergi Dairesi",
+     *   "tax_number": "Vergi Numarası",
+     *   "email": "Email"
+     * }
+     * Eğer invoice_type "I" ise:
+     * @POST 
+     * {
      *   "invoice_type": "I",
-     *   "offer_price": "100",
-     *   "note": "Not",
-     *   "order_items": [
+     *   "shipping_type": "A",
+     *   "order_address": "Adres"
+     * }
+     */
+    public function createOrderDetails(Request $request, $order_id)
+    {
+        try {
+            // İlgili siparişi bul
+            $order = Order::findOrFail($order_id);
+
+            // invoice_type ve shipping_type değerine göre doğrulama kurallarını belirle
+            $rules = [
+                'invoice_type' => 'nullable|in:I,C',
+                'shipping_type' => 'required|in:A,G,T',
+                'order_address' => 'required|string',
+            ];
+
+            if ($request->input('invoice_type') == 'C') {
+                $rules = array_merge($rules, [
+                    'company_name' => 'required|string',
+                    'address' => 'required|string',
+                    'tax_office' => 'required|string',
+                    'tax_number' => 'required|string',
+                ]);
+            }
+
+            // Gelen verileri doğrula
+            $request->validate($rules);
+
+            // Transaksiyon başlat
+            DB::beginTransaction();
+
+            // Siparişi güncelle
+            $order->update([
+                'invoice_type' => $request->input('invoice_type'),
+                'shipping_type' => $request->input('shipping_type'),
+            ]);
+
+            // Sipariş adresini oluştur
+            OrderAddress::create([
+                'order_id' => $order_id,
+                'address' => $request->input('order_address'),
+            ]);
+
+            // invoice_type 'C' ise fatura bilgilerini oluştur
+            if ($request->input('invoice_type') == 'C') {
+                InvoiceInfo::create([
+                    'order_id' => $order_id,
+                    'company_name' => $request->input('company_name'),
+                    'address' => $request->input('address'),
+                    'tax_office' => $request->input('tax_office'),
+                    'tax_number' => $request->input('tax_number'),
+                    'email' => $request->input('email'),
+                ]);
+            }
+
+            // Transaksiyonu tamamla
+            DB::commit();
+
+            // Başarılı yanıt
+            return response()->json(['message' => 'Sipariş detayları başarıyla oluşturuldu'], 201);
+        } catch (ValidationException $e) {
+            // Hata durumunda transaksiyonu geri al
+            DB::rollback();
+            return response()->json(['errors' => $e->errors()], 422);
+        } catch (\Exception $e) {
+            // Hata durumunda transaksiyonu geri al
+            DB::rollback();
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+    /**
+     * Form içeriklerinin doğrulama işlemleri.
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     * Örnek İstek Yapısı
+     * @POST 
+     * {
+     *   "customer": {
+     *     "name": "Ad",
+     *     "surname": "Soyad",
+     *     "phone": "Telefon Numarası",
+     *     "email": "Email"
+     *   },
+     *   "order": {
+     *     "order_name": "Sipariş Adı",
+     *     "note": "Not"
+     *   }
+     * }
+     */
+    public function validateForms(Request $request)
+    {
+        try {
+
+        // Türkçe hata mesajlarıyla birlikte validate edin
+        $messages = [
+            'customer.name.required' => 'Müşteri adı gereklidir.',
+            'customer.name.string' => 'Müşteri adı geçerli bir metin olmalıdır.',
+            'customer.name.max' => 'Müşteri adı en fazla 255 karakter olabilir.',
+            'customer.surname.required' => 'Müşteri soyadı gereklidir.',
+            'customer.surname.string' => 'Müşteri soyadı geçerli bir metin olmalıdır.',
+            'customer.surname.max' => 'Müşteri soyadı en fazla 255 karakter olabilir.',
+            'customer.phone.required' => 'Müşteri telefon numarası gereklidir.',
+            'customer.phone.string' => 'Müşteri telefon numarası geçerli bir metin olmalıdır.',
+            'customer.phone.max' => 'Müşteri telefon numarası en fazla 15 karakter olabilir.',
+            'customer.phone.turkish_phone_number' => 'Telefon numarası geçerli bir formatta olmalıdır.', // Kural için hata mesajı
+            'customer.email.required' => 'Müşteri e-posta adresi gereklidir.',
+            'customer.email.string' => 'Müşteri e-posta adresi geçerli bir metin olmalıdır.',
+            'customer.email.email' => 'Müşteri e-posta adresi geçerli bir e-posta olmalıdır.',
+            'customer.email.max' => 'Müşteri e-posta adresi en fazla 255 karakter olabilir.',
+            'order.order_name.required' => 'Sipariş adı gereklidir.',
+            'order.order_name.string' => 'Sipariş adı geçerli bir metin olmalıdır.',
+            'order.order_name.max' => 'Sipariş adı en fazla 255 karakter olabilir.',
+            'order.note.string' => 'Not geçerli bir metin olmalıdır.',
+        ];
+
+        // Doğrulama kurallarını belirle
+        $rules = [
+            'customer.name' => 'required|string|max:255',
+            'customer.surname' => 'required|string|max:255',
+            'customer.phone' => ['required', 'string', 'max:15', new TurkishPhoneNumber],
+            'customer.email' => 'nullable|string|email|max:255',
+            'order.order_name' => 'required|string|max:255',
+            'order.note' => 'nullable|string',
+        ];
+    
+        // Doğrulama işlemi
+        $request->validate($rules,  $messages);
+    
+        // Doğrulama başarılı
+        return response()->json(['message' => 'Doğrulama başarılı'], 200);
+        
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // Hata yanıtını döndür
+            return response()->json(['errors' => $e->errors()], 422);
+        }
+    }
+    /**
+     * Sepet ürünleri ve logoların doğrulama işlemleri.
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     * Örnek İstek Yapısı
+     * @POST 
+     * {
+     *   "items": [
      *     {
      *       "product_type_id": 1,
      *       "product_category_id": 1,
      *       "quantity": 1,
      *       "color": "Black",
-     *       "unit_price": "100",
+     *       "unit_price": 100.0,
      *       "type": "T"
      *     },
      *     {
      *       "product_type_id": 2,
-     *       "product_category_id": 1,
-     *       "quantity": 1,
-     *       "color": "Black",
-     *       "unit_price": "100",
-     *       "type": "T"
+     *       "product_category_id": 2,
+     *       "quantity": 2,
+     *       "color": "White",
+     *       "unit_price": 200.0,
+     *       "type": "S"
      *     }
      *   ],
-     *   "order_address": "Adres",
-     *   "image_url": "image.jpg",
-     *   "name": "Name",
-     *   "surname": "Surname",
-     *   "phone": "Phone",
-     *   "email": "Email"
-     *  }
+     *   "logos": [
+     *     {
+     *       "logo_url": "image1.jpg"
+     *     },
+     *     {
+     *       "logo_url": "image2.jpg"
+     *     }
+     *   ]
+     * }
      */
-    
-    public function createOrder(Request $request)
+    public function validateOrderItem(Request $request)
     {
+        // Türkçe hata mesajlarıyla birlikte validate edin
+        $messages = [
+            'items.required' => 'Ürün bilgileri gereklidir.',
+            'items.array' => 'Ürün bilgileri bir dizi olmalıdır.',
+            'items.*.product_type_id.integer' => 'Ürün tipi kimliği geçerli bir tamsayı olmalıdır.',
+            'items.*.product_category_id.required' => 'Ürün kategorisi kimliği gereklidir.',
+            'items.*.product_category_id.integer' => 'Ürün kategorisi kimliği geçerli bir tamsayı olmalıdır.',
+            'items.*.quantity.required' => 'Ürün miktarı gereklidir.',
+            'items.*.quantity.integer' => 'Ürün miktarı geçerli bir tamsayı olmalıdır.',
+            'items.*.color.required' => 'Ürün rengi gereklidir.',
+            'items.*.color.string' => 'Ürün rengi geçerli bir metin olmalıdır.',
+            'items.*.color.max' => 'Ürün rengi en fazla 50 karakter olabilir.',
+            'items.*.unit_price.required' => 'Ürün birim fiyatı gereklidir.',
+            'items.*.unit_price.numeric' => 'Ürün birim fiyatı geçerli bir sayı olmalıdır.',
+            'items.*.type.string' => 'Ürün tipi geçerli bir metin olmalıdır.',
+            'logos.required' => 'Logolar gereklidir.',
+            'logos.array' => 'Logolar bir dizi olmalıdır.',
+            'logos.*.logo_url.required' => 'Logo URL\'si gereklidir.',
+            'logos.*.logo_url.string' => 'Logo URL\'si geçerli bir metin olmalıdır.',
+            'logos.*.logo_url.max' => 'Logo URL\'si en fazla 255 karakter olabilir.',
+        ];
+    
         try {
-            // Gelen verileri doğrula
-            $request->validate([
-                // Sipariş Detayları
-                'order_name' => 'required|string',
-                'invoice_type' => 'required|in:I,C',
-                'offer_price' => 'required|numeric|min:0',
-                'note' => 'nullable|string',
-                'shipping_type' => 'required|in:A,G,T', // Eklenen kısım
-                // Sipariş Kalemleri Detaylı Bilgi
-                'order_items.*.product_type_id' => ['nullable', 'exists:product_types,id'],
-                'order_items.*.product_category_id' => ['required', 'exists:product_categories,id'],
-                'order_items.*.quantity' => ['required', 'integer'],
-                'order_items.*.color' => ['required', 'string'],
-                'order_items.*.unit_price' => ['required', 'numeric'],
-                'order_items.*.type' => ['nullable', 'string'],
-                // Sipariş için logo bilgisi
-                'image_url' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf,ai,webp',
-                // Müşteri Bilgileri
-                'name' => 'required|string',
-                'surname' => 'required|string',
-                'phone' => ['required', 'string', 'regex:/^(\+90|0)?[1-9]{1}[0-9]{9}$/'],
-                'email' => 'nullable|email',
-                // Adres Bilgisi
-                'order_address' => 'required|string',
-            ]);
-            
-            // Transaksiyon başlat
-            DB::beginTransaction();
-
-            // Yeni sipariş oluştur
-            $order = Order::create([
-                'customer_id' => Auth::id(),
-                'order_code' => 'ORD-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(4)),
-                'status' => 'OC', // Otomatik olarak "OC" durumu
-                'invoice_type' => $request->input('invoice_type'),
-                'offer_price' => $request->input('offer_price'),
-                'order_name' => $request->input('order_name'),
-                'shipping_type' => $request->input('shipping_type'),
-            ]);
-
-            $orderAddress = new OrderAddress(['address' => $request->input('order_address')]);
-            $order->orderAddress()->save($orderAddress);
-
-            // Sipariş öğelerini ekleyerek kaydet
-            $orderItems = collect($request->input('order_items'))->map(function ($item) use ($order) {
-                return new OrderItem([
-                    'order_id' => $order->id,
-                    'product_type_id' => $item['product_type_id'],
-                    'product_category_id' => $item['product_category_id'],
-                    'type' => $item['type'],
-                    'quantity' => $item['quantity'],
-                    'color' => $item['color'],
-                    'unit_price' => $item['unit_price'],
-                ]);
-            });
-
-            $order->orderItems()->saveMany($orderItems);
-
-            // Fatura tipine göre ilgili fatura bilgileri ekleniyor
-            if ($request->invoice_type == 'C') {
-                $this->addCorporateInvoiceInfo($order, $request);
-            }else {
-                // Fatura tipi 'C' değilse, CustomerInfo tablosuna bilgileri ekliyoruz
-                CustomerInfo::create([
-                    'name' => $request->input('name'),
-                    'surname' => $request->input('surname'),
-                    'phone' => $request->input('phone'),
-                    'email' => $request->input('email'),
-                    'order_id' => $order->id, // Yeni oluşturulan siparişin ID'si
-                ]);
-            }
-
-            if ($request->hasFile('image_url')) {
-                $image = $request->file('image_url');
-                $imageName = 'L' . $order->id . '.' . $image->getClientOriginalExtension();
-                
-                // Resmi storage'a kaydet
-                $path = $image->storeAs('public/logo', $imageName);
-            
-                // Kaydedilen dosyanın URL'sini al
-                $url = Storage::url($path);
-            
-                // OrderImage kaydını oluştur
-                OrderImage::create([
-                    'type' => 'L', // Logo tipi
-                    'product_image' => $url, // Resim dosyasının URL'si
-                    'mime_type' => $image->getClientMimeType(), // MIME tipini kaydet
-                    'order_id' => $order->id,
-                ]);
-
-                broadcast(new AdminNotificationEvent([
-                    'title' => 'Yeni Sipariş Oluşturuldu',
-                    'body' => 'Bir sipariş oluşturuldu.',
-                    'order' => $order,
-                ]));
-            }
-
-            
-            DB::commit();
-            // Başarılı oluşturma yanıtı
-            return response()->json(['order' => $order], 201);
-            
+            // Verileri validate edin
+            $validatedData = $request->validate([
+                'items' => 'required|array',
+                'items.*.product_type_id' => 'nullable|integer',
+                'items.*.product_category_id' => 'required|integer',
+                'items.*.quantity' => 'required|integer',
+                'items.*.color' => 'required|string|max:50',
+                'items.*.unit_price' => 'required|numeric',
+                'items.*.type' => 'nullable|string',
+                'logos' => 'required|array',
+                'logos.*.logo_url' => 'required|string|max:255',
+            ], $messages);
+        
+            // Başarılı yanıt döndür (opsiyonel, validasyon başarılı olursa)
+            return response()->json(['message' => 'Sipariş Sepeti Başarıyla Oluşturuldu.', 'data' => $validatedData], 200);
+        
         } catch (\Illuminate\Validation\ValidationException $e) {
-            DB::rollback();
+            // Hata yanıtını döndür
             return response()->json(['errors' => $e->errors()], 422);
-        } catch (\Exception $e) {
-            DB::rollback();
-            return response()->json($e, 500);
         }
     }
-
     /**
-     * Fatura bilgilerini Ekleme
-     * @param \App\Models\Order $order
+     * Tek bir ürünün doğrulama işlemleri.
      * @param \Illuminate\Http\Request $request
-     * @return mixed|\Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\JsonResponse
      * Örnek İstek Yapısı
      * @POST 
      * {
-     *   "company_name": "Fatura Bilgileri",
-     *   "address": "Adres",
-     *   "tax_office": "Tax Office",
-     *   "tax_number": "Tax Number",
-     *   "email": "Email"
-     *   "name": "Name",
-     *   "surname": "Surname",
-     *   "phone": "Phone"
-     *  }
+     *   "product_type_id": 1,
+     *   "product_category_id": 1,
+     *   "quantity": 1,
+     *   "color": "Black",
+     *   "unit_price": 100.0,
+     *   "type": "T"
+     * }
      */
-    protected function addCorporateInvoiceInfo(Order $order, Request $request)
+    public function validateItem(Request $request)
     {
-        // addressControll değerine göre 'address' alanının doğrulama kuralını belirle
-        if ($request->input('addressControll') == 'true') {
-            $addressRule = 'required|string';
-        } else {
-            $addressRule = 'nullable|string';
-        }
-    
-        // Fatura bilgilerini doğrula
-        $request->validate([
-            'company_name' => 'required|string',
-            'address' => $addressRule,
-            'tax_office' => 'required|string',
-            'tax_number' => 'required|string',
-            'email' => 'required|email',
-        ]);
-    
-        // addressControll değerine göre hangi adresin kaydedileceğini belirle
-        $address = $request->input('addressControll') == 'true' ? $request->input('address') : $request->input('order_address');
-    
-        // Fatura bilgilerini ekleyerek kaydet
-        $invoiceInfo = InvoiceInfo::create([
-            'order_id' => $order->id,
-            'company_name' => $request->input('company_name'),
-            'address' => $address,
-            'tax_office' => $request->input('tax_office'),
-            'tax_number' => $request->input('tax_number'),
-            'email' => $request->input('email'),
-        ]);
-    
-        // Müşteri bilgilerini ekleyerek kaydet
-        $customerInfo = CustomerInfo::create([
-            'name' => $request->input('name'),
-            'surname' => $request->input('surname'),
-            'phone' => $request->input('phone'),
-            'email' => $request->input('email'),
-            'order_id' => $order->id, // Yeni oluşturulan siparişin ID'si
-        ]);
-        $message = [
-            'title' => 'Sipariş Oluşturuldu',
-            'body' => 'Bir sipariş oluşturuldu.',
-            'order' => $order,
-        ];
-
-        // Başarılı ekleme yanıtı
-        return response()->json(['invoice_info' => $invoiceInfo], 201);
-    } 
-    
-    /**
-     * Form içeriklerinin validation işlemlerini yapıyoruz.
-     * ? Tüm rotalar rotası
-     */
-    public function validateForms(Request $request)
-    {
-        // Fatura tipine göre doğrulama kurallarını belirle
-        $rules = [
-            'order_name' => 'required|string',
-            'invoice_type' => 'required|in:I,C',
-            'note' => 'nullable|string',
-            'image_url' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf,ai,webp',
-            'name' => 'required|string',
-            'surname' => 'required|string',
-            'phone' => 'required|string|regex:/^([5]{1}[0-9]{9})$/',
-            'email' => 'nullable|email',
-            'order_address' => 'required|string',  // Adres bilgisi için validasyon kuralı
-            'shipping_type' => 'required|in:T,A,G',
+        // Türkçe hata mesajlarıyla birlikte validate edin
+        $messages = [
+            'product_type_id.integer' => 'Ürün tipi kimliği geçerli bir tamsayı olmalıdır.',
+            'product_category_id.required' => 'Ürün kategorisi kimliği gereklidir.',
+            'product_category_id.integer' => 'Ürün kategorisi kimliği geçerli bir tamsayı olmalıdır.',
+            'quantity.required' => 'Ürün miktarı gereklidir.',
+            'quantity.integer' => 'Ürün miktarı geçerli bir tamsayı olmalıdır.',
+            'color.required' => 'Ürün rengi gereklidir.',
+            'color.string' => 'Ürün rengi geçerli bir metin olmalıdır.',
+            'color.max' => 'Ürün rengi en fazla 50 karakter olabilir.',
+            'unit_price.required' => 'Ürün birim fiyatı gereklidir.',
+            'unit_price.numeric' => 'Ürün birim fiyatı geçerli bir sayı olmalıdır.',
+            'type.string' => 'Ürün tipi geçerli bir metin olmalıdır.',
         ];
     
-        // addressControll değerine göre 'address' alanının doğrulama kuralını belirle
-        if ($request->input('addressControll') == 'true') {
-            $rules['address'] = 'required|string';
-        } else {
-            $rules['address'] = 'nullable|string';
-        }
-    
-        if ($request->input('invoice_type') == 'C') {
-            $rules['company_name'] = 'required|string';
-            $rules['tax_office'] = 'required|string';
-            $rules['tax_number'] = 'required|string';
-            $rules['email'] = 'required|email';
-        }
-    
-        $request->validate($rules,[
-            'order_name' => 'Şipariş adı gereklidir',
-            'invoice_type.required' => 'Fatura tipi zorunludur.',
-            'invoice_type.in' => 'Geçersiz fatura tipi.',
-            'image_url.required' => 'Resim dosyası alanı gereklidir',
-            'image_url.image' => 'Geçersiz resim formatı.',
-            'image_url.mimes' => 'Geçersiz resim MIME türü.',
-            'image_url.max' => 'Resim boyutu en fazla 2048 KB olmalıdır.',
-            'phone.required' => 'Telefon numarası zorunludur.',
-            'phone.string' => 'Telefon numarası bir dize olmalıdır.',
-            'phone.regex' => 'Geçersiz telefon numarası.',
-            'name.required' => 'Ad alanı zorunludur.',
-            'name.string' => 'Ad alanı bir dize olmalıdır.',
-            'surname.required' => 'Soyadı alanı zorunludur.',
-            'surname.string' => 'Soyadı alanı bir dize olmalıdır.',
-            'company_name.required' => 'Şirket adı alanı zorunludur.',
-            'company_name.string' => 'Şirket adı bir dize olmalıdır.',
-            'address.required' => 'Fatura Adresi alanı zorunludur.',
-            'address.string' => 'Adres bir dize olmalıdır.',
-            'tax_office.required' => 'Vergi dairesi alanı zorunludur.',
-            'tax_office.string' => 'Vergi dairesi bir dize olmalıdır.',
-            'tax_number.required' => 'Vergi numarası alanı zorunludur.',
-            'tax_number.string' => 'Vergi numarası bir dize olmalıdır.',
-            'email.required' => 'E-posta alanı zorunludur.',
-            'email.email' => 'Geçersiz e-posta adresi.',
-            'order_address.required' => 'Adres alanı zorunludur.',
-            'order_address.string' => 'Adres bir dize olmalıdır.',
-            'shipping_type.required' => 'Kargo gönderim şeklini alanı zorunludur.',
-            'shipping_type.in' => 'Geçerli bir kargo gönderim şeklini seçiniz (T, A veya G).',
-        ]);
-    
-        // Doğrulama başarılı
-        return response()->json(['message' => 'Doğrulama başarılı'], 200);
-    }
-
-    public function validateOrderItem(Request $request)
-    {
         try {
-            // Validate incoming data
+            // Verileri validate edin
             $validatedData = $request->validate([
-                'product_type_id' => 'nullable|exists:product_types,id',
+                'product_type_id' => 'nullable|integer',
+                'product_category_id' => 'required|integer',
+                'quantity' => 'required|integer',
+                'color' => 'required|string|max:50',
+                'unit_price' => 'required|numeric',
                 'type' => 'nullable|string',
-                'product_category_id' => 'required|exists:product_categories,id',
-                'quantity' => 'required|integer|min:1',
-                'color' => 'required|string',
-                'unit_price' => 'required|numeric|min:0',
-            ], [
-                'product_type_id.exists' => 'Geçersiz ürün tipi.',
-                'product_category_id.required' => 'Ürün kategorisi gereklidir.',
-                'product_category_id.exists' => 'Geçersiz ürün kategorisi.',
-                'quantity.required' => 'Miktar gereklidir.',
-                'quantity.integer' => 'Miktar bir tam sayı olmalıdır.',
-                'quantity.min' => 'Miktar en az 1 olmalıdır.',
-                'color.required' => 'Renk gereklidir.',
-                'color.string' => 'Renk bir metin olmalıdır.',
-                'unit_price.required' => 'Birim fiyat gereklidir.',
-                'unit_price.numeric' => 'Birim fiyat bir sayı olmalıdır.',
-                'unit_price.min' => 'Birim fiyat en az 0 olmalıdır.',
-            ]);
-
-            if (empty($request->input('product_type_id')) && empty($request->input('type'))) {
-                return response()->json(['error' => 'Ürün tipi zorunludur.'], 422);
-            }
-    
-            // Successful validation response
-            return response()->json(['message' => 'Doğrulama başarılı.'], 200);
+            ], $messages);
+        
+            // Başarılı yanıt döndür (opsiyonel, validasyon başarılı olursa)
+            return response()->json(['message' => 'Başarıyla Sipariş Kalemi Eklendi', 'data' => $validatedData], 200);
+        
         } catch (\Illuminate\Validation\ValidationException $e) {
-            // Get the first error message
-            $firstError = Arr::first($e->errors())[0];
-    
-            // Return error response
-            return response()->json(['error' => $firstError], 422);
+            // Hata yanıtını döndür
+            return response()->json(['errors' => $e->errors()], 422);
         }
     }
 }

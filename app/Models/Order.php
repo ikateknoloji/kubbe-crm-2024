@@ -164,10 +164,10 @@ class Order extends Model
     *  Sipariş ürünlerinin Resim , Adet , Renk , kategori gibi bilgiler barındırılır.
     */
 
-    public function orderItems() : HasMany
+    public function baskets()
     {
-        return $this->hasMany(OrderItem::class, 'order_id');
-    } 
+        return $this->hasMany(OrderBasket::class);
+    }
     
     /**
      * Bu siparişin resimleri getirir.
@@ -231,11 +231,6 @@ class Order extends Model
     public function rejectedOrder()
     {
         return $this->hasOne(RejectedOrder::class);
-    }
-
-    public function logoImage(): HasOne
-    {   
-        return $this->hasOne(OrderImage::class)->where('type', 'L');
     }
 
     public function designImages()

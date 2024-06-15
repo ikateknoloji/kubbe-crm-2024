@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('order_items', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('order_id');
+            $table->unsignedBigInteger('order_basket_id');
             $table->unsignedBigInteger('product_type_id')->nullable();
             $table->unsignedBigInteger('product_category_id'); // product_category_id ekleniyor
             $table->integer('quantity');
@@ -22,7 +22,7 @@ return new class extends Migration
             $table->string('type')->nullable();
             $table->timestamps();
 
-            $table->foreign('order_id')->references('id')->on('orders')->onDelete('cascade');
+            $table->foreign('order_basket_id')->references('id')->on('order_baskets')->onDelete('cascade');
             $table->foreign('product_type_id')->references('id')->on('product_types')->onDelete('cascade');
             $table->foreign('product_category_id')->references('id')->on('product_categories')->onDelete('cascade');
         });

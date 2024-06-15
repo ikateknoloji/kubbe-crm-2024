@@ -8,14 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 class OrderLogo extends Model
 {
     use HasFactory;
-
     protected $fillable = [
-        'order_item_id',
-        'logo_path',
+        'order_basket_id', 'logo_path'
     ];
 
-    public function orderItem()
+    public function basket()
     {
-        return $this->belongsTo(OrderItem::class);
+        return $this->belongsTo(OrderBasket::class, 'order_basket_id');
     }
 }

@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('order_name');
             $table->unsignedBigInteger('customer_id');
             $table->string('order_code');
-            $table->enum('status', ['OC', 'DP', 'DA', 'P', 'PA', 'MS', 'PP', 'PR', 'PIT', 'PD']);
+            $table->enum('status', ['OC', 'DP', 'DA', 'P', 'PA', 'MS', 'PP', 'PR', 'PIT', 'PD'])->default('OC');
             $table->unsignedBigInteger('manufacturer_id')->nullable();
             $table->decimal('offer_price', 8, 2);
             $table->enum('invoice_type', ['I', 'C'])->nullable();

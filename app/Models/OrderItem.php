@@ -17,13 +17,14 @@ class OrderItem extends Model
         'color',
         'unit_price',
         'type',
-        'order_logo_id',
+        'order_basket_id'
     ];
 
-    public function order() : BelongsTo
+    public function basket()
     {
-        return $this->belongsTo(Order::class, 'order_id');
+        return $this->belongsTo(OrderBasket::class, 'order_basket_id');
     }
+
 
     public function productType() : BelongsTo
     {
@@ -35,9 +36,5 @@ class OrderItem extends Model
         return $this->belongsTo(ProductCategory::class);
     }
 
-    public function orderLogos()
-    {
-        return $this->hasMany(OrderLogo::class);
-    }
 
 }
