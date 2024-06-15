@@ -39,10 +39,7 @@ class GetOrderController extends Controller
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }       
+                },       
                 ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(12);
@@ -71,9 +68,6 @@ class GetOrderController extends Controller
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }   
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(9);
@@ -95,9 +89,6 @@ class GetOrderController extends Controller
             ->with(['manufacturer' => function ($query) {
                 // İlgili üretici bilgilerini getir
                 $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-            },
-            'logoImage' => function ($query) {
-                $query->select('id', 'order_id', 'product_image', 'type');
             },
             'customerInfo'
             ]) // customerInfo ilişkisini ekledik
@@ -123,10 +114,7 @@ class GetOrderController extends Controller
                 ['customer' => function ($query) {
                 // İlgili müşteri bilgilerini getir
                 $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },
-                'logoImage' => function ($query) {
-                $query->select('id', 'order_id', 'product_image', 'type');
-                }   
+                }, 
             ]) // customerInfo ilişkisini ekledik
             ->paginate(6);
             
@@ -336,9 +324,6 @@ class GetOrderController extends Controller
                         // İlgili üretici bilgilerini getir
                         $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                     },
-                    'logoImage' => function ($query) {
-                        $query->select('id', 'order_id', 'product_image', 'type');
-                    }   
                 ],
                 ) // customerInfo ilişkisini ekledik
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
@@ -365,10 +350,7 @@ class GetOrderController extends Controller
                 'customer' => function ($query) {
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }   
+                },  
                 ]) // customerInfo ilişkisini ekledik
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(5);   
@@ -403,9 +385,6 @@ class GetOrderController extends Controller
                     $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }   
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(6);
@@ -440,9 +419,6 @@ class GetOrderController extends Controller
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }   
             ]) // customerInfo ilişkisini ekledik
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(6);
@@ -472,9 +448,6 @@ class GetOrderController extends Controller
                     $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }   
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(9);  
@@ -551,9 +524,6 @@ class GetOrderController extends Controller
                     $query->select('id', 'email', 'profile_photo');
                 },
                 'customerInfo',
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }   
             ])
             ->orderByDesc('updated_at')
             ->paginate(9);
@@ -586,10 +556,7 @@ class GetOrderController extends Controller
                 'manufacturer' => function ($query) {
                     $query->select('id', 'email', 'profile_photo');
                 },
-                'customerInfo',
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }   
+                'customerInfo',  
             ])
             ->orderByDesc('updated_at')
             ->paginate(9);
@@ -623,10 +590,7 @@ class GetOrderController extends Controller
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
-                'customerInfo', // customerInfo ilişkisini ekledik
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }   
+                'customerInfo', // customerInfo ilişkisini ekledik  
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(9);
@@ -660,10 +624,7 @@ class GetOrderController extends Controller
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
-                'customerInfo', // customerInfo ilişkisini ekledik
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }   
+                'customerInfo', // customerInfo ilişkisini ekledik 
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(9);
@@ -690,9 +651,6 @@ class GetOrderController extends Controller
                 $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
             },
             'customerInfo', // customerInfo ilişkisini ekledik
-            'logoImage' => function ($query) {
-                $query->select('id', 'order_id', 'product_image', 'type');
-            } , 
             'orderItems.productType',
             'orderItems.productCategory',
             'orderImages',
@@ -748,9 +706,6 @@ class GetOrderController extends Controller
                 $query->select('id', 'name' ,'email', 'profile_photo'); 
             },
             'customerInfo', // customerInfo ilişkisini ekledik
-            'logoImage' => function ($query) {
-                $query->select('id', 'order_id', 'product_image', 'type');
-            } , 
             'orderItems.productType',
             'orderItems.productCategory',
             'orderImages',
@@ -813,9 +768,6 @@ class GetOrderController extends Controller
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }   
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(9);
@@ -858,9 +810,6 @@ class GetOrderController extends Controller
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }   
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(9);
@@ -903,10 +852,7 @@ class GetOrderController extends Controller
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
-                'customerInfo', // customerInfo ilişkisini ekledik
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }   
+                'customerInfo', // customerInfo ilişkisini ekledik  
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(request('per_page', 12)); // Varsayılan olarak sayfa başına 12 kayıt getir
@@ -926,9 +872,6 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     $query->select('id', 'name', 'email', 'profile_photo');
-                },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
                 },
                 'orderItems.productType',
                 'orderItems.productCategory',
@@ -991,10 +934,7 @@ class GetOrderController extends Controller
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }       
+                },     
                 ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(12)
@@ -1023,10 +963,7 @@ class GetOrderController extends Controller
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }       
+                },     
                 ])
             ->orderByDesc('updated_at')
             ->paginate(12)
@@ -1056,9 +993,6 @@ class GetOrderController extends Controller
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                } 
             ])
             ->orderByDesc('updated_at')
             ->paginate(12)
@@ -1087,10 +1021,7 @@ class GetOrderController extends Controller
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }       
+                },       
                 ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(12)
@@ -1121,10 +1052,7 @@ class GetOrderController extends Controller
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }       
+                },      
                 ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(12)
@@ -1150,9 +1078,6 @@ class GetOrderController extends Controller
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }  
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(9);
@@ -1174,9 +1099,6 @@ class GetOrderController extends Controller
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                },
                 'orderItems.productType',
                 'orderItems.productCategory',
                 'productionImages'

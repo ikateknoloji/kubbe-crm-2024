@@ -45,10 +45,7 @@ class HistoryOrderController extends Controller
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }       
+                },  
                 ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(12);
@@ -69,10 +66,7 @@ class HistoryOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     $query->select('id', 'name' ,'email', 'profile_photo');
-                },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }       
+                }
             ])
             ->orderByDesc('updated_at')
             ->paginate(12);
@@ -109,10 +103,7 @@ class HistoryOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     $query->select('id', 'name' ,'email', 'profile_photo');
-                },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }       
+                }      
             ])
             ->orderByDesc('updated_at')
             ->paginate(12);
@@ -147,10 +138,7 @@ class HistoryOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     $query->select('id', 'name' ,'email', 'profile_photo');
-                },
-                'logoImage' => function ($query) {
-                    $query->select('id', 'order_id', 'product_image', 'type');
-                }       
+                }    
             ])
             ->orderByDesc('updated_at')
             ->paginate(12); 
