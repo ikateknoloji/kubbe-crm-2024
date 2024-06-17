@@ -19,9 +19,9 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use Illuminate\Support\Arr;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Support\Facades\File; // File sınıfını içe aktarın
 
 class StoreOrderController extends Controller
 {
@@ -106,32 +106,34 @@ class StoreOrderController extends Controller
             'baskets.*.logos' => 'required|array',
             'baskets.*.logos.*.logo_url' => 'required|string|max:255',
         ]);
-    
+
         // Giriş yapmış kullanıcının kimliğini al
         $customerId = Auth::id();
-    
+
         // Order verilerini al ve customer_id'yi ekleyerek Order oluştur
         $orderData = $validatedData['order'];
         $orderData['customer_id'] = $customerId;  // customer_id ekleniyor
+        $orderData['order_code'] = 'ORD-' . now()->format('YmdHis') . '-' . Str::upper(Str::random(4));
+        $orderData['status'] = 'OC';
         $order = Order::create($orderData);
-    
+
         // CustomerInfo verilerini al ve order_id'yi ekleyerek CustomerInfo oluştur
         $customerInfoData = $validatedData['customer'];
         $customerInfoData['order_id'] = $order->id;  // order_id ekleniyor
         $customerInfo = CustomerInfo::create($customerInfoData);
-    
+
         // Her bir sepet için OrderBasket oluştur ve ilişkili verileri kaydet
         foreach ($validatedData['baskets'] as $basketData) {
             // Yeni OrderBasket oluştur ve order_id'yi ekleyerek kaydet
             $orderBasket = new OrderBasket(['order_id' => $order->id]);
             $orderBasket->save();
-        
+
             // Her bir ürün için OrderItem oluştur ve order_basket_id'yi ekleyerek kaydet
             foreach ($basketData['items'] as $itemData) {
                 $itemData['order_basket_id'] = $orderBasket->id; // order_basket_id ekleniyor
                 OrderItem::create($itemData);
             }
-        
+
             // Her bir logo için OrderLogo oluştur ve logo_path'ı kaydet
             foreach ($basketData['logos'] as $logoData) {
                 $logoRecord = new OrderLogo([
@@ -141,7 +143,7 @@ class StoreOrderController extends Controller
                 $logoRecord->save();
             }
         }
-    
+
         // Başarılı yanıt döndür
         return response()->json([
             'message' => 'Data created successfully',
@@ -264,44 +266,43 @@ class StoreOrderController extends Controller
     {
         try {
 
-        // Türkçe hata mesajlarıyla birlikte validate edin
-        $messages = [
-            'customer.name.required' => 'Müşteri adı gereklidir.',
-            'customer.name.string' => 'Müşteri adı geçerli bir metin olmalıdır.',
-            'customer.name.max' => 'Müşteri adı en fazla 255 karakter olabilir.',
-            'customer.surname.required' => 'Müşteri soyadı gereklidir.',
-            'customer.surname.string' => 'Müşteri soyadı geçerli bir metin olmalıdır.',
-            'customer.surname.max' => 'Müşteri soyadı en fazla 255 karakter olabilir.',
-            'customer.phone.required' => 'Müşteri telefon numarası gereklidir.',
-            'customer.phone.string' => 'Müşteri telefon numarası geçerli bir metin olmalıdır.',
-            'customer.phone.max' => 'Müşteri telefon numarası en fazla 15 karakter olabilir.',
-            'customer.phone.turkish_phone_number' => 'Telefon numarası geçerli bir formatta olmalıdır.', // Kural için hata mesajı
-            'customer.email.required' => 'Müşteri e-posta adresi gereklidir.',
-            'customer.email.string' => 'Müşteri e-posta adresi geçerli bir metin olmalıdır.',
-            'customer.email.email' => 'Müşteri e-posta adresi geçerli bir e-posta olmalıdır.',
-            'customer.email.max' => 'Müşteri e-posta adresi en fazla 255 karakter olabilir.',
-            'order.order_name.required' => 'Sipariş adı gereklidir.',
-            'order.order_name.string' => 'Sipariş adı geçerli bir metin olmalıdır.',
-            'order.order_name.max' => 'Sipariş adı en fazla 255 karakter olabilir.',
-            'order.note.string' => 'Not geçerli bir metin olmalıdır.',
-        ];
+            // Türkçe hata mesajlarıyla birlikte validate edin
+            $messages = [
+                'customer.name.required' => 'Müşteri adı gereklidir.',
+                'customer.name.string' => 'Müşteri adı geçerli bir metin olmalıdır.',
+                'customer.name.max' => 'Müşteri adı en fazla 255 karakter olabilir.',
+                'customer.surname.required' => 'Müşteri soyadı gereklidir.',
+                'customer.surname.string' => 'Müşteri soyadı geçerli bir metin olmalıdır.',
+                'customer.surname.max' => 'Müşteri soyadı en fazla 255 karakter olabilir.',
+                'customer.phone.required' => 'Müşteri telefon numarası gereklidir.',
+                'customer.phone.string' => 'Müşteri telefon numarası geçerli bir metin olmalıdır.',
+                'customer.phone.max' => 'Müşteri telefon numarası en fazla 15 karakter olabilir.',
+                'customer.phone.turkish_phone_number' => 'Telefon numarası geçerli bir formatta olmalıdır.', // Kural için hata mesajı
+                'customer.email.required' => 'Müşteri e-posta adresi gereklidir.',
+                'customer.email.string' => 'Müşteri e-posta adresi geçerli bir metin olmalıdır.',
+                'customer.email.email' => 'Müşteri e-posta adresi geçerli bir e-posta olmalıdır.',
+                'customer.email.max' => 'Müşteri e-posta adresi en fazla 255 karakter olabilir.',
+                'order.order_name.required' => 'Sipariş adı gereklidir.',
+                'order.order_name.string' => 'Sipariş adı geçerli bir metin olmalıdır.',
+                'order.order_name.max' => 'Sipariş adı en fazla 255 karakter olabilir.',
+                'order.note.string' => 'Not geçerli bir metin olmalıdır.',
+            ];
 
-        // Doğrulama kurallarını belirle
-        $rules = [
-            'customer.name' => 'required|string|max:255',
-            'customer.surname' => 'required|string|max:255',
-            'customer.phone' => ['required', 'string', 'max:15', new TurkishPhoneNumber],
-            'customer.email' => 'nullable|string|email|max:255',
-            'order.order_name' => 'required|string|max:255',
-            'order.note' => 'nullable|string',
-        ];
-    
-        // Doğrulama işlemi
-        $request->validate($rules,  $messages);
-    
-        // Doğrulama başarılı
-        return response()->json(['message' => 'Doğrulama başarılı'], 200);
-        
+            // Doğrulama kurallarını belirle
+            $rules = [
+                'customer.name' => 'required|string|max:255',
+                'customer.surname' => 'required|string|max:255',
+                'customer.phone' => ['required', 'string', 'max:15', new TurkishPhoneNumber],
+                'customer.email' => 'nullable|string|email|max:255',
+                'order.order_name' => 'required|string|max:255',
+                'order.note' => 'nullable|string',
+            ];
+
+            // Doğrulama işlemi
+            $request->validate($rules,  $messages);
+
+            // Doğrulama başarılı
+            return response()->json(['message' => 'Doğrulama başarılı'], 200);
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Hata yanıtını döndür
             return response()->json(['errors' => $e->errors()], 422);
@@ -365,7 +366,7 @@ class StoreOrderController extends Controller
             'logos.*.logo_url.string' => 'Logo URL\'si geçerli bir metin olmalıdır.',
             'logos.*.logo_url.max' => 'Logo URL\'si en fazla 255 karakter olabilir.',
         ];
-    
+
         try {
             // Verileri validate edin
             $validatedData = $request->validate([
@@ -379,10 +380,9 @@ class StoreOrderController extends Controller
                 'logos' => 'required|array',
                 'logos.*.logo_url' => 'required|string|max:255',
             ], $messages);
-        
+
             // Başarılı yanıt döndür (opsiyonel, validasyon başarılı olursa)
             return response()->json(['message' => 'Sipariş Sepeti Başarıyla Oluşturuldu.', 'data' => $validatedData], 200);
-        
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Hata yanıtını döndür
             return response()->json(['errors' => $e->errors()], 422);
@@ -412,31 +412,122 @@ class StoreOrderController extends Controller
             'product_category_id.integer' => 'Ürün kategorisi kimliği geçerli bir tamsayı olmalıdır.',
             'quantity.required' => 'Ürün miktarı gereklidir.',
             'quantity.integer' => 'Ürün miktarı geçerli bir tamsayı olmalıdır.',
+            'quantity.min' => 'Ürün miktarı en az bir olmalıdır.',
             'color.required' => 'Ürün rengi gereklidir.',
             'color.string' => 'Ürün rengi geçerli bir metin olmalıdır.',
             'color.max' => 'Ürün rengi en fazla 50 karakter olabilir.',
             'unit_price.required' => 'Ürün birim fiyatı gereklidir.',
             'unit_price.numeric' => 'Ürün birim fiyatı geçerli bir sayı olmalıdır.',
+            'unit_price.min' => 'Ürün birim fiyatı en az 500 TL olmalıdır.',
             'type.string' => 'Ürün tipi geçerli bir metin olmalıdır.',
         ];
-    
+
         try {
             // Verileri validate edin
             $validatedData = $request->validate([
                 'product_type_id' => 'nullable|integer',
                 'product_category_id' => 'required|integer',
-                'quantity' => 'required|integer',
+                'quantity' => 'required|integer|min:1',
                 'color' => 'required|string|max:50',
-                'unit_price' => 'required|numeric',
+                'unit_price' => 'required|numeric|min:25',
                 'type' => 'nullable|string',
             ], $messages);
-        
+
             // Başarılı yanıt döndür (opsiyonel, validasyon başarılı olursa)
             return response()->json(['message' => 'Başarıyla Sipariş Kalemi Eklendi', 'data' => $validatedData], 200);
-        
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Hata yanıtını döndür
             return response()->json(['errors' => $e->errors()], 422);
         }
+    }
+
+    public function upload(Request $request)
+    {
+        // Validate file type and size
+        $request->validate([
+            'logos' => 'required|file|mimes:jpeg,png,jpg,gif,pdf,ai|max:20480', // max 20MB
+            'order_name' => 'required|string|max:255', // Validate order_name
+        ]);
+
+        if ($request->hasFile('logos')) {
+            // Get the uploaded file
+            $file = $request->file('logos');
+
+            $orderName = $request->input('order_name');
+            $orderName = $this->sanitizeFileName($orderName);
+
+            // Generate a unique file name including sanitized order_name
+            $filename = Str::uuid() . '_' . $orderName . '.' . $file->getClientOriginalExtension();
+
+            // Store the file
+            $path = $file->storeAs('public/logos', $filename);
+
+            // Return the file path as the logo_url
+            return response()->json([
+                'logo_url' => Storage::url($path),
+            ], 200);
+        }
+
+        return response()->json(['message' => 'No file uploaded'], 400);
+    }
+
+    public function revert(Request $request)
+    {
+        // Validate logo_url
+        $request->validate([
+            'logo_url' => 'required|string',
+        ]);
+
+        // Gelen logo_url bilgisinden 'storage/' kısmını çıkarın
+        $filePath = str_replace('storage/', 'public/', $request->input('logo_url'));
+
+        // Dosyayı sil
+        if (Storage::exists($filePath)) {
+            Storage::delete($filePath);
+            return response()->json(['message' => 'File deleted'], 200);
+        }
+
+        return response()->json(['message' => 'File not found'], 404);
+    }
+
+    /**
+     * Dosyayı indirme işlemi.
+     *
+     * @param Request $request
+     * @return \Symfony\Component\HttpFoundation\StreamedResponse
+     */
+    public function download(Request $request)
+    {
+        // URL'den dosya yolunu ayıklama
+        $url = $request->input('url');
+        // Gelen logo_url bilgisinden 'storage/' kısmını çıkarın
+        $filePath = str_replace('/storage', 'public', $url);
+
+        // Dosyanın var olup olmadığını kontrol et
+        if (!Storage::exists($filePath)) {
+            return response()->json(['error' => 'File not found'], 404);
+        }
+
+        // Dosyanın MIME tipini belirle
+        $mimeType = Storage::mimeType($filePath);
+
+        // Dosyayı indirmek için yanıtı döndür
+        return Storage::download($filePath, basename($url), [
+            'Content-Type' => $mimeType,
+            'Content-Disposition' => 'attachment; filename="' . basename($url) . '"'
+        ]);
+    }
+
+    /**
+     * Sanitize file name by converting Turkish characters to English equivalents and replacing spaces with hyphens
+     */
+    private function sanitizeFileName($fileName)
+    {
+        $turkish = ['ş', 'Ş', 'ı', 'İ', 'ç', 'Ç', 'ü', 'Ü', 'ö', 'Ö', 'ğ', 'Ğ'];
+        $english = ['s', 'S', 'i', 'I', 'c', 'C', 'u', 'U', 'o', 'O', 'g', 'G'];
+        $fileName = str_replace($turkish, $english, $fileName);
+        $fileName = preg_replace('/\s+/', '-', $fileName); // Replace spaces with hyphens
+        $fileName = preg_replace('/[^A-Za-z0-9\-_]/', '', $fileName); // Remove any remaining special characters
+        return $fileName;
     }
 }

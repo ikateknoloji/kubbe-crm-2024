@@ -21,8 +21,8 @@ class OrderImageController extends Controller
     {
         // Siparişe ait resmi bul
         $orderImage = OrderImage::where('order_id', $orderId)
-                                ->where('type', $type)
-                                ->firstOrFail();
+            ->where('type', $type)
+            ->firstOrFail();
 
         // Dosya yolunu belirle
         $filePath = str_replace('/storage', 'public', $orderImage->product_image);
