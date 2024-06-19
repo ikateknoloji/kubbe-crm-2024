@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class ProductionImage extends Model
 {
     use HasFactory;
-    protected $fillable = ['order_id', 'file_path','is_selected'];
+    protected $fillable = ['order_id', 'file_path'];
 
     public function order()
     {

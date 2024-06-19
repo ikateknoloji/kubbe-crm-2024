@@ -28,6 +28,7 @@ Route::post('/login', [AuthController::class, 'login']);
 
 Route::post('/dowload-logo-file', [StoreOrderController::class, 'download']);
 
+Route::get('/order-for-customer-by-code/{order_code}', [GetOrderController::class, 'getOrderByCodeForCustomer']);
 
 Route::middleware('auth:sanctum')->get('/validate-token', function (Request $request) {
     // Kullanıcı doğrulandıysa, token geçerlidir
@@ -141,6 +142,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/production-status-orders', [GetOrderController::class, 'getProductionStatusOrders']);
         // Üretime gidecek siparişleri getir
         Route::get('/orders-production-update-status', [OrderManageController::class, 'updateProductionStatus']);
+        // Üretimi Tamamla
+        Route::post('/mark-completed-orders/{orderId}', [OrderManageController::class, 'markOrderAsCompleted']);
     });
 
     /** Kurye sipariş görüntüleme rotasıları. **/
@@ -198,7 +201,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('check.single.role:admin')->group(function () {
 
         // Müşterinin Aktif siparişleri getir
-        Route::get('/orders/customer-active/{customerId}', [HistoryOrderController::class, 'getCustomerActiveOrders']);
+        Route::get('/history-orders/customer-active/{customerId}', [HistoryOrderController::class, 'getCustomerActiveOrders']);
         // Müşterinin Geçmiş siparişleri getir
         Route::get('/orders/customer-history/{customerId}', [HistoryOrderController::class, 'getCustomerOrderHistory']);
         // Üreticinin Aktif siparişleri getir
@@ -245,8 +248,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('check.single.role:tasarimci')->group(function () {
         // Ödeme Onayını ve İlerlemeyi Gerçekleştirme rotası
-        // Route::post('/orders/{order}/approve-design', [OrderManageController::class, 'approveDesign']);
         Route::post('/upload-production-image/{order}', [OrderManageController::class, 'uploadProductionImage']);
+        // Tasrım Ekle
         Route::post('/approve-design/{order}', [OrderManageController::class, 'approveDesign']);
         // 'update-design/{order}' rotasını tanımlayın
         Route::post('/update-design/{order}', [UpdateOrderController::class, 'updateDesign']);
@@ -312,9 +315,3 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/user/{id}/read', [NotificationReadController::class, 'markUserNotificationAsRead']);
     Route::post('/notifications/manufacturer/{id}/read', [NotificationReadController::class, 'markManufacturerNotificationAsRead']);
 });
-
-Route::get('/customer-orders/{customerId}', [HistoryOrderController::class, 'getCustomerOrdersWithCosts']);
-Route::get('/manufacturer-orders/{manufacturerId}/quantities', [HistoryOrderController::class, 'getManufacturerOrdersQuantities']);
-Route::get('/monthly-orders', [HistoryOrderController::class, 'getMonthlyOrderInfo']);
-
-Route::post('/orders/pdf/{customerId}', [HistoryOrderController::class, 'getCustomerOrderPDF']);

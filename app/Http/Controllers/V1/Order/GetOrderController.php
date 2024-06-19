@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+
 class GetOrderController extends Controller
 {
     /**
@@ -38,15 +39,15 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },       
-                ])
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+            ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(12);
 
         return response()->json(['orders' => $orders]);
     }
-    
+
     /**
      * Belirtilen 'status' değerine sahip siparişleri getirir.
      *
@@ -65,13 +66,13 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(9);
-    
+
         return response()->json(['orders' => $orders]);
     }
 
@@ -83,18 +84,19 @@ class GetOrderController extends Controller
     public function getCustomerOrders(): JsonResponse
     {
         $customerId = Auth::id();
-    
+
         // Belirtilen müşteri 'id' değerine sahip siparişleri al
         $orders = Order::where('customer_id', $customerId)
-            ->with(['manufacturer' => function ($query) {
-                // İlgili üretici bilgilerini getir
-                $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-            },
-            'customerInfo'
+            ->with([
+                'manufacturer' => function ($query) {
+                    // İlgili üretici bilgilerini getir
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'customerInfo'
             ]) // customerInfo ilişkisini ekledik
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(6);
-    
+
         return response()->json(['orders' => $orders]);
     }
 
@@ -111,13 +113,15 @@ class GetOrderController extends Controller
         $orders = Order::where('manufacturer_id', $manufacturerId)
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->with(
-                ['customer' => function ($query) {
-                // İlgili müşteri bilgilerini getir
-                $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                }, 
-            ]) // customerInfo ilişkisini ekledik
+                [
+                    'customer' => function ($query) {
+                        // İlgili müşteri bilgilerini getir
+                        $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                    },
+                ]
+            ) // customerInfo ilişkisini ekledik
             ->paginate(6);
-            
+
 
         return response()->json(['orders' => $orders], 200);
     }
@@ -133,31 +137,32 @@ class GetOrderController extends Controller
         $order = Order::with([
             'customer' => function ($query) {
                 // İlgili müşteri bilgilerini getir
-                $query->select('id', 'name','email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
             },
             'manufacturer' => function ($query) {
                 // İlgili üretici bilgilerini getir
-                $query->select('id', 'name','email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
             },
-            'orderItems.productType',
-            'orderItems.productCategory',
+            'baskets.items.productType',
+            'baskets.items.productCategory',
+            'baskets.logos',
             'orderImages',
             'customerInfo',
             'invoiceInfo',
             'orderAddress',
             'designImages',
-            'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'  
+            'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'
         ])->find($id);
-    
+
         // Siparişin admin tarafından okunduğunu belirt
         if ($order && !$order->admin_read) {
             $order->admin_read = true;
             $order->save();
         }
-    
+
         // İlgili resim tiplerini filtreleme
         $filteredImages = $order->orderImages
-            ->whereIn('type', ['L', 'D','P','PR','SC','PL'])
+            ->whereIn('type', ['D', 'P', 'PR', 'SC', 'PL'])
             ->groupBy('type')
             ->map(function ($images) {
                 return $images->map(function ($image) {
@@ -165,26 +170,26 @@ class GetOrderController extends Controller
                         'id' => $image->id,
                         'order_id' => $image->order_id,
                         'type' => $image->type,
-                        'image_url' => asset( $image->product_image),
+                        'image_url' => asset($image->product_image),
                         'mime_type' => $image->mime_type,
                         'created_at' => $image->created_at,
                         'updated_at' => $image->updated_at,
                     ];
                 })->first(); // Sadece ilk resmi al
             });
-    
+
         // Dönüştürülmüş resimleri, sipariş nesnesine ekleyin
         $order->formatted_order_images = $filteredImages->toArray();
-    
+
         // Sipariş bulunamazsa, null yanıtı döndür
         if (!$order) {
             return response()->json(['message' => 'Order not found'], 404);
         }
-    
+
         // Dönüştürülmüş sipariş nesnesini kullanabilirsiniz
         return response()->json(['order' => $order]);
     }
-    
+
     /**
      * Belirtilen 'id' değerine sahip tekil siparişi getirir.
      * Ancak, siparişin 'customer_id' değeri, Auth bilgileri ile aynı olmalıdır.
@@ -196,36 +201,37 @@ class GetOrderController extends Controller
     {
         // Auth bilgilerini al
         $user = Auth::user();
-    
+
         $order = Order::with([
             'manufacturer' => function ($query) {
                 // İlgili üretici bilgilerini getir
                 $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
             },
-            'orderItems.productType',
-            'orderItems.productCategory',
+            'baskets.items.productType',
+            'baskets.items.productCategory',
+            'baskets.logos',
             'orderImages',
             'customerInfo',
             'invoiceInfo',
             'orderAddress',
             'designImages',
-            'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'  
+            'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'
         ])->find($id);
-    
+
         // Siparişin 'customer_id' değeri, Auth bilgileri ile aynı olmalıdır
         if ($order->customer_id != $user->id) {
             return response()->json(['error' => 'Bu siparişi görüntüleme yetkiniz yok.'], 403);
         }
-        
+
         // Siparişin müşteri tarafından okunduğunu belirt
         if (!$order->customer_read) {
             $order->customer_read = true;
             $order->save();
         }
-    
+
         // İlgili resim tiplerini filtreleme
         $filteredImages = $order->orderImages
-            ->whereIn('type', ['L', 'D','P','PR','SC','PL'])
+            ->whereIn('type', ['D', 'P', 'PR', 'SC', 'PL'])
             ->groupBy('type')
             ->map(function ($images) {
                 return $images->map(function ($image) {
@@ -233,55 +239,61 @@ class GetOrderController extends Controller
                         'id' => $image->id,
                         'order_id' => $image->order_id,
                         'type' => $image->type,
-                        'image_url' => asset( $image->product_image),
+                        'image_url' => asset($image->product_image),
                         'mime_type' => $image->mime_type,
                         'created_at' => $image->created_at,
                         'updated_at' => $image->updated_at,
                     ];
                 })->first(); // Sadece ilk resmi al
             });
-    
+
         // Dönüştürülmüş resimleri, sipariş nesnesine ekleyin
         $order->formatted_order_images = $filteredImages->toArray();
-    
+
         // Dönüştürülmüş sipariş nesnesini kullanabilirsiniz
         return response()->json(['order' => $order], 200);
     }
-    
+
     /**
-    * Belirtilen 'id' değerine sahip tekil siparişi getirir.
-    * Ancak, siparişin 'manufacturer_id' değeri, Auth bilgileri ile aynı olmalıdır.
-    *
-    * @param  int  $id
-    * @return \Illuminate\Http\JsonResponse
-    */
+     * Belirtilen 'id' değerine sahip tekil siparişi getirir.
+     * Ancak, siparişin 'manufacturer_id' değeri, Auth bilgileri ile aynı olmalıdır.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function getOrderByIdForManufacturer($id)
     {
         // Auth bilgilerini al
         $manufacturerId = Auth::id();
-    
+
         $order = Order::where('manufacturer_id', $manufacturerId)->with([
             'manufacturer' => function ($query) {
                 // İlgili üretici bilgilerini getir
                 $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
             },
-            'orderItems.productType',
-            'orderItems.productCategory',
+            'customer' => function ($query) {
+                // İlgili müşteri bilgilerini getir
+                $query->select('id', 'name', 'email', 'profile_photo');
+            },
+            'baskets.items.productType',
+            'baskets.items.productCategory',
+            'baskets.logos',
             'orderImages',
             'customerInfo',
             'invoiceInfo',
             'orderAddress',
+            'designImages',
             'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'
         ])->find($id);
-    
-        // Check if the order is null before proceeding
+
+        // Sipariş bulunamazsa veya üreticiye ait değilse hata döndür
         if ($order === null) {
             return response()->json(['message' => 'Order not found or access denied'], 404);
         }
 
         // İlgili resim tiplerini filtreleme
         $filteredImages = $order->orderImages
-            ->whereIn('type', ['L', 'D','P','PR','SC','PL'])
+            ->whereIn('type', ['D', 'P', 'PR', 'SC', 'PL'])
             ->groupBy('type')
             ->map(function ($images) {
                 return $images->map(function ($image) {
@@ -289,21 +301,21 @@ class GetOrderController extends Controller
                         'id' => $image->id,
                         'order_id' => $image->order_id,
                         'type' => $image->type,
-                        'image_url' => asset( $image->product_image),
+                        'image_url' => asset($image->product_image),
                         'mime_type' => $image->mime_type,
                         'created_at' => $image->created_at,
                         'updated_at' => $image->updated_at,
                     ];
                 })->first(); // Sadece ilk resmi al
             });
-    
+
         // Dönüştürülmüş resimleri, sipariş nesnesine ekleyin
         $order->formatted_order_images = $filteredImages->toArray();
-    
+
         // Dönüştürülmüş sipariş nesnesini kullanabilirsiniz
         return response()->json(['order' => $order], 200);
     }
-    
+
     /**
      * Belirtilen müşteri 'id' değerine sahip ve belirtilen 'status' değerine sahip siparişleri getirir.
      *
@@ -312,7 +324,7 @@ class GetOrderController extends Controller
      */
     public function getCustomerOrdersByStatus($status)
     {
-        $customerId = Auth::id();   
+        $customerId = Auth::id();
 
         // Belirtilen müşteri 'id' değerine sahip ve belirtilen 'status' değerine sahip siparişleri al
         $orders = Order::where('customer_id', $customerId)
@@ -325,12 +337,12 @@ class GetOrderController extends Controller
                         $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                     },
                 ],
-                ) // customerInfo ilişkisini ekledik
+            ) // customerInfo ilişkisini ekledik
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
-            ->paginate(9);   
+            ->paginate(9);
 
         return response()->json(['orders' => $orders], 200);
-    }   
+    }
 
     /**
      * Belirtilen üretici 'id' değerine sahip ve belirtilen 'status' değerine sahip siparişleri getirir.
@@ -340,7 +352,7 @@ class GetOrderController extends Controller
      */
     public function getManufacturerOrdersByStatus($status)
     {
-        $manufacturerId = Auth::id();   
+        $manufacturerId = Auth::id();
 
         // Belirtilen üretici 'id' değerine sahip ve belirtilen 'status' değerine sahip siparişleri al
         $orders = Order::where('manufacturer_id', $manufacturerId)
@@ -350,14 +362,14 @@ class GetOrderController extends Controller
                 'customer' => function ($query) {
                     // İlgili üretici bilgilerini getir
                     $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },  
-                ]) // customerInfo ilişkisini ekledik
+                },
+            ]) // customerInfo ilişkisini ekledik
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
-            ->paginate(5);   
+            ->paginate(5);
 
         return response()->json(['orders' => $orders], 200);
     }
-    
+
     /**
      * Belirtilen üretici 'id' değerine sahip ve belirtilen 'status' değerine sahip siparişleri getirir.
      *
@@ -375,7 +387,7 @@ class GetOrderController extends Controller
     public function getManufacturerOrderHistory()
     {
         $manufacturerId = Auth::id();
-    
+
         // Belirtilen üretici 'id' değerine sahip ve 'production_date' değeri null olmayan siparişleri al
         $orders = Order::where('manufacturer_id', $manufacturerId)
             ->whereNotNull('production_date')
@@ -388,7 +400,7 @@ class GetOrderController extends Controller
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(6);
-    
+
         return response()->json(['order_history' => $orders], 200);
     }
 
@@ -425,7 +437,7 @@ class GetOrderController extends Controller
 
         return response()->json(['order_history' => $orders], 200);
     }
-    
+
     /**
      * 'status' değeri 'PP' olan, 'estimated_production_date' değeri güncel tarih bilgisinden geri olan ve 'production_date' değeri <null>< /null> olan siparişleri getirir.
      *
@@ -450,8 +462,8 @@ class GetOrderController extends Controller
                 'customerInfo', // customerInfo ilişkisini ekledik
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
-            ->paginate(9);  
-            
+            ->paginate(9);
+
 
         return response()->json(['orders' => $orders], 200);
     }
@@ -471,11 +483,11 @@ class GetOrderController extends Controller
      */
     public function getBillingOrders(): JsonResponse
     {
-            // 'A' (Active) durumuna sahip ve teslim edilmemiş siparişleri al
-            $orders = Order::where('is_rejected', 'A')
+        // 'A' (Active) durumuna sahip ve teslim edilmemiş siparişleri al
+        $orders = Order::where('is_rejected', 'A')
             ->where(function ($query) {
-            $query->where('status', 'PD')
-              ->orWhere('status', 'PR');
+                $query->where('status', 'PD')
+                    ->orWhere('status', 'PR');
             })
             ->whereDoesntHave('orderImages', function ($query) {
                 $query->where('type', 'I'); // 'I' tipinde resme sahip siparişleri hariç tut
@@ -489,9 +501,9 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
-                ])
+            ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(12);
 
@@ -508,7 +520,7 @@ class GetOrderController extends Controller
     {
         // Kullanıcı ID'sini al
         $userId = Auth::id();
-        
+
         // Belirtilen 'status' değeri 'PP' olan, 'estimated_production_date' değeri güncel tarih bilgisinden geri olan ve 'production_date' değ<></  eri> null olan siparişleri al
         // Ayrıca, 'customer_id' değeri Auth::id() ile alınan kullanıcı ID'sine eşit olan siparişleri filtrele
         $orders = Order::where('status', 'PP')
@@ -527,7 +539,7 @@ class GetOrderController extends Controller
             ])
             ->orderByDesc('updated_at')
             ->paginate(9);
-            
+
         return response()->json(['orders' => $orders], 200);
     }
 
@@ -541,7 +553,7 @@ class GetOrderController extends Controller
     {
         // Kullanıcı ID'sini al
         $userId = Auth::id();
-        
+
         // Belirtilen 'status' değeri 'PP' olan, 'estimated_production_date' değeri güncel tarih bilgisinden geri olan ve 'production_date' değeri  null olan siparişleri al
         // Ayrıca, 'manufacturer_id' değeri Auth::id() ile alınan kullanıcı ID'sine eşit olan siparişleri filtrele
         $orders = Order::where('status', 'PP')
@@ -556,15 +568,15 @@ class GetOrderController extends Controller
                 'manufacturer' => function ($query) {
                     $query->select('id', 'email', 'profile_photo');
                 },
-                'customerInfo',  
+                'customerInfo',
             ])
             ->orderByDesc('updated_at')
             ->paginate(9);
-            
+
         return response()->json(['orders' => $orders], 200);
     }
 
-        /*
+    /*
      * Aktif durumda olan ve teslim edilmemiş siparişleri getirir.
      *
      * @return JsonResponse
@@ -579,7 +591,7 @@ class GetOrderController extends Controller
      */
     public function getDesingerOrders(): JsonResponse
     {
-       $orders = Order::where('status', 'DP')
+        $orders = Order::where('status', 'DP')
             ->where('is_rejected', 'A')
             ->with([
                 'customer' => function ($query) {
@@ -588,13 +600,13 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik  
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(9);
-    
+
         return response()->json(['orders' => $orders]);
     }
 
@@ -613,7 +625,7 @@ class GetOrderController extends Controller
      */
     public function getDesingerUpdateOrders(): JsonResponse
     {
-       $orders = Order::whereNotIn('status', ['OC', 'DP']) // 'OC' ve 'DP' dışındaki durumları getir
+        $orders = Order::whereNotIn('status', ['OC', 'DP']) // 'OC' ve 'DP' dışındaki durumları getir
             ->where('is_rejected', 'A')
             ->with([
                 'customer' => function ($query) {
@@ -622,7 +634,7 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik 
             ])
@@ -633,38 +645,41 @@ class GetOrderController extends Controller
     }
 
     /**
-    * Belirtilen 'id' değerine sahip tekil siparişi getirir.
-    * Ancak, siparişin 'manufacturer_id' değeri, Auth bilgileri ile aynı olmalıdır.
-    *
-    * @param  int  $id
-    * @return \Illuminate\Http\JsonResponse
-    */
+     * Belirtilen 'id' değerine sahip tekil siparişi getirir.
+     * Ancak, siparişin 'designer_id' değeri, Auth bilgileri ile aynı olmalıdır.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function getOrderByIdForDesinger($id)
-    {    
+    {
         $order = Order::with([
             'customer' => function ($query) {
                 // İlgili müşteri bilgilerini getir
-                $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                $query->select('id', 'name', 'email', 'profile_photo');
             },
             'manufacturer' => function ($query) {
                 // İlgili üretici bilgilerini getir
-                $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                $query->select('id', 'name', 'email', 'profile_photo');
             },
-            'customerInfo', // customerInfo ilişkisini ekledik
-            'orderItems.productType',
-            'orderItems.productCategory',
-            'orderImages',
+            'baskets.items.productType',
+            'baskets.items.productCategory',
+            'baskets.logos',
             'customerInfo',
             'invoiceInfo',
             'orderAddress',
-            'designImages',
-            'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'  
+            'productionImages',
+            'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'
         ])->find($id);
-    
+
+        // Sipariş bulunamazsa veya tasarımcıya ait değilse hata döndür
+        if ($order === null) {
+            return response()->json(['message' => 'Order not found or access denied'], 404);
+        }
 
         // İlgili resim tiplerini filtreleme
         $filteredImages = $order->orderImages
-            ->whereIn('type', ['L', 'D','P','PR','SC','PL'])
+            ->whereIn('type', ['D', 'P', 'PR', 'SC', 'PL'])
             ->groupBy('type')
             ->map(function ($images) {
                 return $images->map(function ($image) {
@@ -672,53 +687,58 @@ class GetOrderController extends Controller
                         'id' => $image->id,
                         'order_id' => $image->order_id,
                         'type' => $image->type,
-                        'image_url' => asset( $image->product_image),
+                        'image_url' => asset($image->product_image),
                         'mime_type' => $image->mime_type,
                         'created_at' => $image->created_at,
                         'updated_at' => $image->updated_at,
                     ];
                 })->first(); // Sadece ilk resmi al
             });
-    
+
         // Dönüştürülmüş resimleri, sipariş nesnesine ekleyin
         $order->formatted_order_images = $filteredImages->toArray();
-    
+
         // Dönüştürülmüş sipariş nesnesini kullanabilirsiniz
         return response()->json(['order' => $order], 200);
     }
-    
+
     /**
-    * Belirtilen 'id' değerine sahip tekil siparişi getirir.
-    * Ancak, siparişin 'manufacturer_id' değeri, Auth bilgileri ile aynı olmalıdır.
-    *
-    * @param  int  $id
-    * @return \Illuminate\Http\JsonResponse
-    */
+     * Belirtilen 'id' değerine sahip tekil siparişi getirir.
+     * Ancak, siparişin 'courier_id' değeri, Auth bilgileri ile aynı olmalıdır.
+     *
+     * @param  int  $id
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function getOrderByIdForCourier($id)
-    {    
+    {
+
         $order = Order::with([
             'customer' => function ($query) {
                 // İlgili müşteri bilgilerini getir
-                $query->select('id', 'name', 'email', 'profile_photo'); 
+                $query->select('id', 'name', 'email', 'profile_photo');
             },
             'manufacturer' => function ($query) {
                 // İlgili üretici bilgilerini getir
-                $query->select('id', 'name' ,'email', 'profile_photo'); 
+                $query->select('id', 'name', 'email', 'profile_photo');
             },
-            'customerInfo', // customerInfo ilişkisini ekledik
-            'orderItems.productType',
-            'orderItems.productCategory',
+            'baskets.items.productType',
+            'baskets.items.productCategory',
+            'baskets.logos',
             'orderImages',
             'customerInfo',
             'invoiceInfo',
             'orderAddress',
-            'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'  
+            'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'
         ])->find($id);
-    
+
+        // Sipariş bulunamazsa veya kuryeye ait değilse hata döndür
+        if ($order === null) {
+            return response()->json(['message' => 'Order not found or access denied'], 404);
+        }
 
         // İlgili resim tiplerini filtreleme
         $filteredImages = $order->orderImages
-            ->whereIn('type', ['L', 'D','P','PR','SC','PL'])
+            ->whereIn('type', ['D', 'P', 'PR', 'SC', 'PL'])
             ->groupBy('type')
             ->map(function ($images) {
                 return $images->map(function ($image) {
@@ -726,17 +746,17 @@ class GetOrderController extends Controller
                         'id' => $image->id,
                         'order_id' => $image->order_id,
                         'type' => $image->type,
-                        'image_url' => asset( $image->product_image),
+                        'image_url' => asset($image->product_image),
                         'mime_type' => $image->mime_type,
                         'created_at' => $image->created_at,
                         'updated_at' => $image->updated_at,
                     ];
                 })->first(); // Sadece ilk resmi al
             });
-    
+
         // Dönüştürülmüş resimleri, sipariş nesnesine ekleyin
         $order->formatted_order_images = $filteredImages->toArray();
-    
+
         // Dönüştürülmüş sipariş nesnesini kullanabilirsiniz
         return response()->json(['order' => $order], 200);
     }
@@ -756,7 +776,7 @@ class GetOrderController extends Controller
      */
     public function getUpdateCourier(): JsonResponse
     {
-       $orders = Order::where('status', ['PD']) // 'OC' ve 'DP' dışındaki durumları getir
+        $orders = Order::where('status', ['PD']) // 'OC' ve 'DP' dışındaki durumları getir
             ->where('is_rejected', 'A')
             ->with([
                 'customer' => function ($query) {
@@ -765,7 +785,11 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'orderImages' => function ($query) {
+                    // 'D' tipindeki resimleri getir
+                    $query->where('type', 'D');
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
             ])
@@ -774,6 +798,7 @@ class GetOrderController extends Controller
 
         return response()->json(['orders' => $orders]);
     }
+
     /**
      * Aktif durumda olan ve teslim edilmemiş siparişleri getirir.
      *
@@ -790,7 +815,7 @@ class GetOrderController extends Controller
 
     public function getAwaitCourier(): JsonResponse
     {
-       $orders = Order::where('status', ['PR']) // 'OC' ve 'DP' dışındaki durumları getir
+        $orders = Order::where('status', ['PR']) // 'OC' ve 'DP' dışındaki durumları getir
             ->where('is_rejected', 'A')
             ->when(request('invoice_type') === 'C', function ($query) {
                 $query->whereHas('orderImages', function ($subQuery) {
@@ -807,7 +832,11 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'orderImages' => function ($query) {
+                    // 'D' tipindeki resimleri getir
+                    $query->where('type', 'D');
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
             ])
@@ -850,43 +879,44 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik  
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(request('per_page', 12)); // Varsayılan olarak sayfa başına 12 kayıt getir
-            
+
         return response()->json(['orders' => $orders]);
     }
 
     public function getOrderByCode($order_code): JsonResponse
     {
         try {
-            
-        $order = Order::where('order_code', $order_code)
-            ->where('is_rejected', 'A')
-            ->with([
-                'customer' => function ($query) {
-                    $query->select('id', 'name', 'email', 'profile_photo');
-                },
-                'manufacturer' => function ($query) {
-                    $query->select('id', 'name', 'email', 'profile_photo');
-                },
-                'orderItems.productType',
-                'orderItems.productCategory',
-                'orderImages',
-                'customerInfo',
-                'invoiceInfo',
-                'orderAddress',
-                'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'  
-            ])
-            ->first(); // Eşleşen ilk kaydı getir veya null dön
 
-             if ($order) {
-                    // İlgili resim tiplerini filtreleme
-                    $filteredImages = $order->orderImages
-                    ->whereIn('type', ['L', 'D','P','PR','SC','PL'])
+            $order = Order::where('order_code', $order_code)
+                ->where('is_rejected', 'A')
+                ->with([
+                    'customer' => function ($query) {
+                        $query->select('id', 'name', 'email', 'profile_photo');
+                    },
+                    'manufacturer' => function ($query) {
+                        $query->select('id', 'name', 'email', 'profile_photo');
+                    },
+                    'baskets.items.productType',
+                    'baskets.items.productCategory',
+                    'baskets.logos',
+                    'orderImages',
+                    'customerInfo',
+                    'invoiceInfo',
+                    'orderAddress',
+                    'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'
+                ])
+                ->first(); // Eşleşen ilk kaydı getir veya null dön
+
+            if ($order) {
+                // İlgili resim tiplerini filtreleme
+                $filteredImages = $order->orderImages
+                    ->whereIn('type', ['L', 'D', 'P', 'PR', 'SC', 'PL'])
                     ->groupBy('type')
                     ->map(function ($images) {
                         return $images->map(function ($image) {
@@ -894,26 +924,24 @@ class GetOrderController extends Controller
                                 'id' => $image->id,
                                 'order_id' => $image->order_id,
                                 'type' => $image->type,
-                                'image_url' => asset( $image->product_image),
+                                'image_url' => asset($image->product_image),
                                 'mime_type' => $image->mime_type,
                                 'created_at' => $image->created_at,
                                 'updated_at' => $image->updated_at,
                             ];
                         })->first(); // Sadece ilk resmi al
-                });
-            
+                    });
+
 
                 // Dönüştürülmüş resimleri, sipariş nesnesine ekleyin
                 $order->formatted_order_images = $filteredImages->toArray();
-
             }
-            
+
             return response()->json(['order' => $order]);
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
-        // Kayıt bulunamadığında kullanıcıya döndürülecek yanıt
-        return response()->json(['message' => 'Sipariş bulunamadı veya geçersiz.'], 404);
-        } 
-
+            // Kayıt bulunamadığında kullanıcıya döndürülecek yanıt
+            return response()->json(['message' => 'Sipariş bulunamadı veya geçersiz.'], 404);
+        }
     }
 
     public function search(Request $request)
@@ -923,7 +951,7 @@ class GetOrderController extends Controller
 
         // 'orders' tablosunda 'order_name' ve 'order_code' sütunlarına göre arama yapın
         $orders = Order::query()
-            ->where('order_name', 'LIKE', "%{$query}%") 
+            ->where('order_name', 'LIKE', "%{$query}%")
             ->orWhere('order_code', 'LIKE', "%{$query}%")
             ->with([
                 'customerInfo',
@@ -933,9 +961,9 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },     
-                ])
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+            ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(12)
             ->withQueryString();
@@ -952,7 +980,7 @@ class GetOrderController extends Controller
 
         $orders = Order::query()
             ->where('customer_id', $userId) // Yalnızca oturum açmış kullanıcının siparişlerini al
-            ->where('order_name', 'LIKE', "%{$query}%") 
+            ->where('order_name', 'LIKE', "%{$query}%")
             ->orWhere('order_code', 'LIKE', "%{$query}%")
             ->with([
                 'customerInfo',
@@ -962,9 +990,9 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },     
-                ])
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+            ])
             ->orderByDesc('updated_at')
             ->paginate(12)
             ->withQueryString();
@@ -980,7 +1008,7 @@ class GetOrderController extends Controller
         // manufacturer_id değerine sahip tüm siparişleri getir
         $orders = Order::query()
             ->where('manufacturer_id', $userId) // Yalnızca oturum açmış üreticinin siparişlerini al
-            ->where('order_name', 'LIKE', "%{$query}%") 
+            ->where('order_name', 'LIKE', "%{$query}%")
             ->orWhere('order_code', 'LIKE', "%{$query}%")
             ->where('is_rejected', 'A')
             ->with([
@@ -991,7 +1019,7 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
             ])
             ->orderByDesc('updated_at')
@@ -1010,7 +1038,7 @@ class GetOrderController extends Controller
         // 'orders' tablosunda 'order_name' ve 'order_code' sütunlarına göre arama yapın
         $orders = Order::query()
             ->where('status', '!=', 'OC')
-            ->where('order_name', 'LIKE', "%{$query}%") 
+            ->where('order_name', 'LIKE', "%{$query}%")
             ->orWhere('order_code', 'LIKE', "%{$query}%")
             ->with([
                 'customerInfo',
@@ -1020,9 +1048,9 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },       
-                ])
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+            ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(12)
             ->withQueryString();
@@ -1041,7 +1069,7 @@ class GetOrderController extends Controller
         // 'orders' tablosunda 'order_name' ve 'order_code' sütunlarına göre arama yapın
         $orders = Order::query()
             ->where('status',  ['PR', 'PD'])
-            ->where('order_name', 'LIKE', "%{$query}%") 
+            ->where('order_name', 'LIKE', "%{$query}%")
             ->orWhere('order_code', 'LIKE', "%{$query}%")
             ->with([
                 'customerInfo',
@@ -1051,9 +1079,13 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
-                },      
-                ])
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'orderImages' => function ($query) {
+                    // 'D' tipindeki resimleri getir
+                    $query->where('type', 'D');
+                },
+            ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(12)
             ->withQueryString();
@@ -1065,7 +1097,7 @@ class GetOrderController extends Controller
 
     public function getProductionStagePOrders(): JsonResponse
     {
-        $orders = Order::where('production_stage', 'P') // production_stage değeri 'P' olanları getir
+        $orders = Order::where('production_status', 'in_progress') // production_stage değeri 'P' olanları getir
             ->whereNotIn('status', ['OC', 'DP']) // 'OC' ve 'DP' dışındaki durumları getir
             ->where('is_rejected', 'A')
             ->with([
@@ -1075,13 +1107,17 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'orderImages' => function ($query) {
+                    // 'D' tipindeki resimleri getir
+                    $query->where('type', 'D');
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(9);
-            
+
         return response()->json(['orders' => $orders]);
     }
 
@@ -1096,18 +1132,75 @@ class GetOrderController extends Controller
                 },
                 'manufacturer' => function ($query) {
                     // İlgili üretici bilgilerini getir
-                    $query->select('id', 'name' ,'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
                 'orderItems.productType',
                 'orderItems.productCategory',
-                'productionImages'
-                ,
+                'productionImages',
             ])
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->get(); // Tüm sonuçları getir
-            
+
         return response()->json(['orders' => $orders]);
     }
 
+    /**
+     * Order_code değerine göre siparişi getirir.
+     *
+     * @param  string  $order_code
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getOrderByCodeForCustomer($order_code): JsonResponse
+    {
+        // Siparişi order_code ile bul
+        $order = Order::where('order_code', $order_code)->with([
+            'customer' => function ($query) {
+                $query->select('id', 'name', 'email', 'profile_photo');
+            },
+            'manufacturer' => function ($query) {
+                $query->select('id', 'name', 'email', 'profile_photo');
+            },
+            'baskets.items.productType',
+            'baskets.items.productCategory',
+            'baskets.logos',
+            'orderImages',
+            'customerInfo',
+            'invoiceInfo',
+            'orderAddress',
+            'designImages',
+            'cancelledOrder',
+            'rejectedOrder',
+            'orderCancelRequest'
+        ])->first();
+
+        // Sipariş bulunamazsa hata döndür
+        if ($order === null) {
+            return response()->json(['message' => 'Order not found'], 404);
+        }
+
+        // İlgili resim tiplerini filtreleme
+        $filteredImages = $order->orderImages
+            ->whereIn('type', ['L', 'D', 'P', 'PR', 'SC', 'PL'])
+            ->groupBy('type')
+            ->map(function ($images) {
+                return $images->map(function ($image) {
+                    return [
+                        'id' => $image->id,
+                        'order_id' => $image->order_id,
+                        'type' => $image->type,
+                        'image_url' => asset($image->product_image),
+                        'mime_type' => $image->mime_type,
+                        'created_at' => $image->created_at,
+                        'updated_at' => $image->updated_at,
+                    ];
+                })->first(); // Sadece ilk resmi al
+            });
+
+        // Dönüştürülmüş resimleri, sipariş nesnesine ekleyin
+        $order->formatted_order_images = $filteredImages->toArray();
+
+        // Dönüştürülmüş sipariş nesnesini kullanabilirsiniz
+        return response()->json(['order' => $order], 200);
+    }
 }

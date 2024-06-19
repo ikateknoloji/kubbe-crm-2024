@@ -28,7 +28,7 @@ class UpdateOrderController extends Controller
      * @param int $orderId Siparişin ID'si
      * @return JsonResponse
      */
-    public function updateLogoImage(Request $request, $orderId) : JsonResponse
+    public function updateLogoImage(Request $request, $orderId): JsonResponse
     {
         // Doğrulama kuralları
         $validator = Validator::make($request->all(), [
@@ -65,7 +65,6 @@ class UpdateOrderController extends Controller
                 'product_image' => $productImageUrl,
                 'mime_type' => $image->getClientMimeType(),
             ]);
-
         } else {
             // Yeni resmi kaydet
             $image = $request->file('logo_image');
@@ -84,7 +83,7 @@ class UpdateOrderController extends Controller
             ]);
         }
         $order = Order::where('id', $orderId)->first();
-        
+
         $message = [
             'title' => 'Logo resmi güncellendi.',
             'body' => 'Logo resmi güncellendi lütfen bu yeni logo bilgisiyle tasarımı oluşturun.',
@@ -129,23 +128,23 @@ class UpdateOrderController extends Controller
                 'design_images.*.file' => 'Dosya bir resim dosyası olmalıdır.',
                 'design_images.*.mimes' => 'Dosya formatı jpeg, png, jpg, gif veya svg olmalıdır.',
             ]);
-        
+
             // Doğrulama hatası varsa, ilk hatayı döndür
             if ($validator->fails()) {
                 return response()->json(['error' => $validator->errors()->first()], 422);
             }
-        
+
             // Mevcut tasarım resmini bul
             $currentDesign = $order->orderImages()->where('type', 'D')->first();
-        
+
             // Yeni resim dosyasını yükle
             $image = $request->file('design_image');
             $imageName = 'design_' . $order->id . '.' . $image->getClientOriginalExtension();
             $path = $image->storeAs('public/designs', $imageName);
-        
+
             // URL oluştur
             $designPath = Storage::url($path);
-        
+
             if ($currentDesign) {
                 // Eski tasarım resmini sil ve mevcut kaydı güncelle
                 if (!empty($currentDesign->design_path)) {
@@ -162,16 +161,16 @@ class UpdateOrderController extends Controller
                     'design_path' => $designPath,
                 ]);
             }
-        
+
             // design_images arrayındaki her bir dosyayı yükle ve kaydet (isteğe bağlı)
             if ($request->hasFile('design_images')) {
                 collect($request->file('design_images'))->each(function ($image) use ($order) {
                     $imageName  = 'design_' . $order->id . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
                     $filepath = $image->storeAs('public/designs_files', $imageName);
-                
+
                     // URL oluştur
                     $designPath = Storage::url($filepath);
-                
+
                     // DesignImage modeline order_id'yi ekleyerek kaydet
                     DesignImage::create([
                         'design_path' => $designPath,
@@ -179,16 +178,16 @@ class UpdateOrderController extends Controller
                     ]);
                 });
             }
-        
+
             $message = [
                 'title' => 'Tasarım resmi güncellendi.',
                 'body' => 'Tasarım resmi güncellendi lütfen tasarım resmini müşterinizle paylaşın.',
                 'order' => $order
             ];
-        
+
             // Bildirimi yayınla
             broadcast(new CustomerNotificationEvent($order->customer_id, $message));
-        
+
             return response()->json(['message' => 'Tasarım başarıyla güncellendi.'], 200);
         } catch (\Exception $e) {
             return response()->json(['error' => 'Bir hata oluştu: ' . $e->getMessage()], 500);
@@ -218,16 +217,16 @@ class UpdateOrderController extends Controller
             'phone.required' => 'Telefon alanı gereklidir.',
             'email.email' => 'Geçerli bir e-posta adresi giriniz.',
         ]);
-    
+
         // Doğrulama başarısızsa hata mesajlarını döndür
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
-    
+
         // Siparişi bul ve ilişkili müşteri bilgisini al
         $order = Order::findOrFail($orderId);
         $customerInfo = $order->customerInfo;
-    
+
         // Müşteri bilgisini güncelle
         $customerInfo->update($validator->validated());
 
@@ -236,10 +235,10 @@ class UpdateOrderController extends Controller
             'body' => 'Müşteri bilgileri inceleyin artık yeni müşteri bilgilerine sahipsiniz.',
             'order' => $order
         ];
-        
+
         // Bildirimi yayınla
         broadcast(new AdminNotificationEvent($message));
-        
+
         // Başarılı yanıt döndür
         return response()->json([
             'message' => 'Müşteri bilgisi başarıyla güncellendi.',
@@ -247,7 +246,7 @@ class UpdateOrderController extends Controller
         ], 200);
     }
 
-        /**
+    /**
      * Belirli bir siparişin adresini günceller.
      *
      * @param Request $request
@@ -264,26 +263,26 @@ class UpdateOrderController extends Controller
         // Gelen isteği doğrula
         $validator = Validator::make($request->all(), [
             'address' => 'required|string|max:65535', // Adres için doğrulama kuralları
-        ],[
+        ], [
             'address.required' => 'Adres alanı gereklidir.',
             'address.string' => 'Adres alanı metin tipinde olmalıdır.',
             'address.max' => 'Adres çok uzun. Maksimum 65535 karakter olmalıdır.',
-        ]); 
+        ]);
 
         // Doğrulama başarısızsa hata döndür
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 422);
-        }   
+        }
 
         // Sipariş adresini bul veya hata döndür
-        $orderAddress = OrderAddress::where('order_id', $orderId)->firstOrFail();   
+        $orderAddress = OrderAddress::where('order_id', $orderId)->firstOrFail();
 
         // Adresi güncelle
         $orderAddress->update([
             'address' => $request->input('address'),
-        ]); 
+        ]);
 
-        $order = Order::where('id', $orderId)->firstOrFail();   
+        $order = Order::where('id', $orderId)->firstOrFail();
 
         $message = [
             'title' => 'Sipariş Adresi güncellendi.',
@@ -291,8 +290,8 @@ class UpdateOrderController extends Controller
             'order' => $order
         ];
 
-                
-        if ($order->status == 'Ürün Hazır'|| $order->status == 'Ürün Transfer Aşaması') {
+
+        if ($order->status == 'Ürün Hazır' || $order->status == 'Ürün Transfer Aşaması') {
             $message = [
                 'title' => 'Sipariş İptal Edildi',
                 'body' => 'Siparişiniz iptal edildi.',
@@ -302,7 +301,7 @@ class UpdateOrderController extends Controller
             // Bildirimi yayınla
             broadcast(new CourierNotificationEvent($message));
         }
-        
+
         // Başarılı yanıt döndür
         return response()->json(['message' => 'Adres başarıyla güncellendi.', 'orderAddress' => $orderAddress], 200);
     }
@@ -322,34 +321,31 @@ class UpdateOrderController extends Controller
             'address' => 'required|string|max:65535',
             'tax_office' => 'required|string|max:255',
             'tax_number' => 'required|string|max:255',
-            'email' => 'required|email|max:255',
         ], [
             'company_name.required' => 'Şirket adı alanı gereklidir.',
             'address.required' => 'Adres alanı gereklidir.',
             'tax_office.required' => 'Vergi dairesi alanı gereklidir.',
             'tax_number.required' => 'Vergi numarası alanı gereklidir.',
-            'email.required' => 'E-posta alanı gereklidir.',
-            'email.email' => 'Geçerli bir e-posta adresi giriniz.',
         ]);
-    
+
         // Doğrulama başarısızsa hata mesajlarını döndür
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
-    
+
         // Siparişi bul ve ilişkili fatura bilgisini al
         $order = Order::findOrFail($orderId);
         $invoiceInfo = $order->invoiceInfo;
-    
+
         // Fatura bilgisini güncelle
         $invoiceInfo->update($validator->validated());
-    
+
         $message = [
             'title' => 'Fatura bilgileri güncellendi.',
             'body' => 'Fatura bilgileri inceleyin ödemeyi kontrol edin.',
             'order' => $order
         ];
-        
+
         // Bildirimi yayınla
         broadcast(new AdminNotificationEvent($message));
 
@@ -359,7 +355,7 @@ class UpdateOrderController extends Controller
             'invoiceInfo' => $invoiceInfo
         ], 200);
     }
-    
+
     /**
      * Belirli bir sipariş kaleminin detaylarını günceller.
      *
@@ -402,40 +398,40 @@ class UpdateOrderController extends Controller
             'type.string' => 'Tip bir metin olmalıdır.',
             'type.max' => 'Tip çok uzun. Maksimum 255 karakter olmalıdır.'
         ]);
-    
+
         // Doğrulama başarısızsa hata mesajlarını döndür
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
-    
+
         // Sipariş kalemini bul veya hata döndür
         $orderItem = OrderItem::findOrFail($orderItemId);
-    
+
         // Sipariş kalemini güncelle
         $orderItem->update($validator->validated());
-    
+
         // İlişkili siparişin toplam teklif fiyatını hesapla
         $totalOfferPrice = OrderItem::where('order_id', $orderItem->order_id)
-                                    ->select(DB::raw('SUM(unit_price * quantity) as total'))
-                                    ->pluck('total')
-                                    ->first();
-    
+            ->select(DB::raw('SUM(unit_price * quantity) as total'))
+            ->pluck('total')
+            ->first();
+
         // İlişkili siparişi bul
         $order = Order::findOrFail($orderItem->order_id);
-    
+
         // Siparişin teklif fiyatını güncelle
         $order->update(['offer_price' => $totalOfferPrice]);
-    
+
 
         $message = [
             'title' => 'Teklif fiyatları güncellendi.',
             'body' => 'Siparişi inceleyebilir ve teklif tutarını inceleyebilirsiniz.',
             'order' => $order
         ];
-        
+
         // Bildirimi yayınla
         broadcast(new AdminNotificationEvent($message));
-        
+
         // Başarılı yanıt döndür
         return response()->json([
             'mesaj' => 'Sipariş kalemi ve toplam teklif fiyatı başarıyla güncellendi.',
@@ -460,13 +456,13 @@ class UpdateOrderController extends Controller
             'manufacturer_id.required' => 'Üretici ID alanı gereklidir.',
             'manufacturer_id.exists' => 'Seçilen üretici mevcut değil.',
         ]);
-    
+
 
         // Doğrulama hatası varsa, ilk hatayı döndür
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
-    
+
         // Üreticiyi güncelle
         $order->update([
             'manufacturer_id' => $request->input('manufacturer_id'),
@@ -566,27 +562,27 @@ class UpdateOrderController extends Controller
             'product_ready_image.mimes' => 'Dosya formatı pdf, jpeg, png, jpg, gif veya svg olmalıdır.',
             'product_ready_image.max' => 'Dosya boyutu maksimum 2048 kilobayt olmalıdır.',
         ]);
-    
+
         // Doğrulama hatası varsa, ilk hatayı döndür
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
-    
+
         // Mevcut 'Product Ready' resmini bul
         $orderImage = $order->orderImages()->where('type', 'PR')->first();
-    
+
         // Yeni resim dosyasını yükle ve bilgileri al
         $image = $request->file('product_ready_image');
         $imageName = 'product_ready_' . $order->id . '.' . $image->getClientOriginalExtension();
         $path = $image->storeAs('public/product_ready', $imageName);
-    
+
         // URL oluştur
         $productImageUrl = Storage::url($path);
-    
+
         if ($orderImage) {
             // Eski resmi sil
             Storage::delete($orderImage->product_image);
-        
+
             // Mevcut kaydı güncelle
             $orderImage->update([
                 'product_image' => $productImageUrl,
@@ -601,7 +597,7 @@ class UpdateOrderController extends Controller
                 'mime_type' => $image->getClientMimeType(),
             ]);
         }
-        
+
         $message = [
             'title' => 'Ürün resmi güncellendi.',
             'body' => 'Ürün resmi güncellendi lütfen ürün resmini müşterinizle paylaşın.',
@@ -632,27 +628,27 @@ class UpdateOrderController extends Controller
             'product_in_transition_image.mimes' => 'Dosya formatı jpeg, png, jpg, gif veya svg olmalıdır.',
             'product_in_transition_image.max' => 'Dosya boyutu maksimum 2048 kilobayt olmalıdır.',
         ]);
-    
+
         // Doğrulama hatası varsa, ilk hatayı döndür
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
-    
+
         // Mevcut 'Product in Transition' resmini bul veya yoksa yeni bir tane oluştur
         $orderImage = $order->orderImages()->where('type', 'SC')->first();
-    
+
         // Yeni resim dosyasını yükle ve bilgileri al
         $image = $request->file('product_in_transition_image');
         $imageName = 'product_in_transition_' . $order->id . '.' . $image->getClientOriginalExtension();
         $path = $image->storeAs('public/product_in_transition', $imageName);
-    
+
         // URL oluştur
         $productImageUrl = Storage::url($path);
-    
+
         if ($orderImage) {
             // Eski resmi sil
             Storage::delete($orderImage->product_image);
-        
+
             // Mevcut kaydı güncelle
             $orderImage->update([
                 'product_image' => $productImageUrl,
@@ -667,7 +663,7 @@ class UpdateOrderController extends Controller
                 'mime_type' => $image->getClientMimeType(),
             ]);
         }
-        
+
         $message = [
             'title' => 'Kargo bilgileri güncellendi.',
             'body' => 'Kargo kodu güncellendi lütfen kargo kodunu indirin.',
@@ -679,5 +675,4 @@ class UpdateOrderController extends Controller
 
         return response()->json(['message' => 'Kargo Resmi başarıyla güncellendi.'], 200);
     }
-
 }

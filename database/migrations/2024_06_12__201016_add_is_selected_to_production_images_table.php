@@ -22,7 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('production_images', function (Blueprint $table) {
-            //
+            $table->dropColumn('is_selected'); // Kaldırılan sütun
         });
     }
 };
