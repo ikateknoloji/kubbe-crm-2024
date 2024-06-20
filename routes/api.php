@@ -92,6 +92,8 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('check.single.role:admin')->group(function () {
+        // Şifre güncelleme fonksiyonu
+        Route::get('/update-password', [UserController::class, 'updatePasswordAdmin']);
         // Aktif siparişleri getir
         Route::get('/orders/active', [GetOrderController::class, 'getActiveOrders']);
         // Belirtilen durumdaki siparişleri getir

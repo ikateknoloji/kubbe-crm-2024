@@ -97,4 +97,23 @@ class UserController extends Controller
 
         return response()->json(['message' => 'E-posta adresi başarıyla güncellendi.'], 200);
     }
+
+    // Şifre güncelleme fonksiyonu
+    public function updatePasswordAdmin(Request $request)
+    {
+        // Validasyon
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'new_password' => 'required|min:8|confirmed',
+        ]);
+
+        // Kullanıcıyı bul
+        $user = User::find($request->user_id);
+
+        // Şifreyi güncelle
+        $user->password = Hash::make($request->new_password);
+        $user->save();
+
+        return response()->json(['message' => 'Şifre başarıyla güncellendi']);
+    }
 }
