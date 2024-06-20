@@ -45,7 +45,7 @@ class HistoryOrderController extends Controller
                     $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12);
 
         return response()->json(['orders' => $orders]);
@@ -66,7 +66,7 @@ class HistoryOrderController extends Controller
                     $query->select('id', 'name', 'email', 'profile_photo');
                 }
             ])
-            ->orderByDesc('updated_at')
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12);
 
         return response()->json(['orders' => $orders]);
@@ -100,7 +100,7 @@ class HistoryOrderController extends Controller
                     $query->select('id', 'name', 'email', 'profile_photo');
                 }
             ])
-            ->orderByDesc('updated_at')
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12);
 
         return response()->json(['orders' => $orders]);
@@ -135,7 +135,7 @@ class HistoryOrderController extends Controller
                     $query->select('id', 'name', 'email', 'profile_photo');
                 }
             ])
-            ->orderByDesc('updated_at')
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12);
 
         return response()->json(['orders' => $orders]);

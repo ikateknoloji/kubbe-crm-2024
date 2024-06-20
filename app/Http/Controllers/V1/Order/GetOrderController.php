@@ -42,7 +42,7 @@ class GetOrderController extends Controller
                     $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12);
 
         return response()->json(['orders' => $orders]);
@@ -70,7 +70,7 @@ class GetOrderController extends Controller
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(9);
 
         return response()->json(['orders' => $orders]);
@@ -94,7 +94,7 @@ class GetOrderController extends Controller
                 },
                 'customerInfo'
             ]) // customerInfo ilişkisini ekledik
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(6);
 
         return response()->json(['orders' => $orders]);
@@ -111,7 +111,7 @@ class GetOrderController extends Controller
 
         // Belirtilen üretici 'id' değerine sahip siparişleri al
         $orders = Order::where('manufacturer_id', $manufacturerId)
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->with(
                 [
                     'customer' => function ($query) {
@@ -338,7 +338,7 @@ class GetOrderController extends Controller
                     },
                 ],
             ) // customerInfo ilişkisini ekledik
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(9);
 
         return response()->json(['orders' => $orders], 200);
@@ -364,7 +364,7 @@ class GetOrderController extends Controller
                     $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
             ]) // customerInfo ilişkisini ekledik
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(5);
 
         return response()->json(['orders' => $orders], 200);
@@ -398,7 +398,7 @@ class GetOrderController extends Controller
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(6);
 
         return response()->json(['order_history' => $orders], 200);
@@ -432,7 +432,7 @@ class GetOrderController extends Controller
                     $query->select('id', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
             ]) // customerInfo ilişkisini ekledik
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(6);
 
         return response()->json(['order_history' => $orders], 200);
@@ -461,7 +461,7 @@ class GetOrderController extends Controller
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(9);
 
 
@@ -504,7 +504,7 @@ class GetOrderController extends Controller
                     $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12);
 
         return response()->json(['orders' => $orders]);
@@ -537,7 +537,7 @@ class GetOrderController extends Controller
                 },
                 'customerInfo',
             ])
-            ->orderByDesc('updated_at')
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(9);
 
         return response()->json(['orders' => $orders], 200);
@@ -570,7 +570,7 @@ class GetOrderController extends Controller
                 },
                 'customerInfo',
             ])
-            ->orderByDesc('updated_at')
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(9);
 
         return response()->json(['orders' => $orders], 200);
@@ -604,7 +604,7 @@ class GetOrderController extends Controller
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik  
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(9);
 
         return response()->json(['orders' => $orders]);
@@ -638,7 +638,7 @@ class GetOrderController extends Controller
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik 
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(9);
 
         return response()->json(['orders' => $orders]);
@@ -793,7 +793,7 @@ class GetOrderController extends Controller
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(9);
 
         return response()->json(['orders' => $orders]);
@@ -883,7 +883,7 @@ class GetOrderController extends Controller
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik  
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(request('per_page', 12)); // Varsayılan olarak sayfa başına 12 kayıt getir
 
         return response()->json(['orders' => $orders]);
@@ -964,7 +964,7 @@ class GetOrderController extends Controller
                     $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12)
             ->withQueryString();
 
@@ -993,7 +993,7 @@ class GetOrderController extends Controller
                     $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
             ])
-            ->orderByDesc('updated_at')
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12)
             ->withQueryString();
 
@@ -1022,7 +1022,7 @@ class GetOrderController extends Controller
                     $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
             ])
-            ->orderByDesc('updated_at')
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12)
             ->withQueryString();
 
@@ -1051,7 +1051,7 @@ class GetOrderController extends Controller
                     $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
                 },
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12)
             ->withQueryString();
 
@@ -1086,7 +1086,7 @@ class GetOrderController extends Controller
                     $query->where('type', 'D');
                 },
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12)
             ->withQueryString();
 
@@ -1115,7 +1115,7 @@ class GetOrderController extends Controller
                 },
                 'customerInfo', // customerInfo ilişkisini ekledik
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(9);
 
         return response()->json(['orders' => $orders]);
@@ -1139,7 +1139,7 @@ class GetOrderController extends Controller
                 'orderItems.productCategory',
                 'productionImages',
             ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->get(); // Tüm sonuçları getir
 
         return response()->json(['orders' => $orders]);

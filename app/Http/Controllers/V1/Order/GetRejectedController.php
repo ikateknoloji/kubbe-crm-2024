@@ -32,7 +32,7 @@ class GetRejectedController extends Controller
                 },
                 'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'  
             ])
-            ->orderByDesc('updated_at')
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate();
             
         return response()->json(['orders' => $orders], 200);
@@ -60,7 +60,7 @@ class GetRejectedController extends Controller
                 'cancelledOrder',
                 'orderCancelRequest',
             ])
-            ->orderByDesc('updated_at')
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate();
             
         return response()->json(['orders' => $orders], 200);
@@ -88,7 +88,7 @@ class GetRejectedController extends Controller
                 },
                 'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'  
                 ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12);
 
         return response()->json(['orders' => $orders]);
@@ -117,7 +117,7 @@ class GetRejectedController extends Controller
                 },
                 'cancelledOrder', 'rejectedOrder', 'orderCancelRequest'  
                 ])
-            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
             ->paginate(12);
 
         return response()->json(['orders' => $orders]);
