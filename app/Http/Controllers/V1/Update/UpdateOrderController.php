@@ -21,88 +21,6 @@ use Illuminate\Http\JsonResponse;
 
 class UpdateOrderController extends Controller
 {
-    /**
-     * Belirli bir siparişin logo resmini günceller.
-     *
-     * @param Request $request İstek nesnesi
-     * @param int $orderId Siparişin ID'si
-     * @return JsonResponse
-     */
-    public function updateLogoImage(Request $request, $orderId): JsonResponse
-    {
-        // Doğrulama kuralları
-        $validator = Validator::make($request->all(), [
-            'logo_image' => 'required|file|mimes:pdf,jpeg,png,jpg,gif,svg|max:2048',
-        ], [
-            'logo_image.required' => 'Logo resmi gereklidir.',
-            'logo_image.file' => 'Dosya bir resim olmalıdır.',
-            'logo_image.mimes' => 'Dosya formatı jpeg, png, jpg, gif veya svg olmalıdır.',
-            'logo_image.max' => 'Dosya boyutu maksimum 2048 kilobayt olmalıdır.',
-        ]);
-
-        // Doğrulama hatası varsa, ilk hatayı döndür
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()->first()], 422);
-        }
-
-        // Mevcut logo resmini bul veya yoksa yeni bir tane oluştur
-        $orderImage = Order::find($orderId)->orderImages()->where('type', 'L')->first();
-
-        if ($orderImage) {
-            // Eski resmi sil
-            Storage::delete($orderImage->product_image);
-
-            // Yeni resmi kaydet
-            $image = $request->file('logo_image');
-            $imageName = 'L' . $orderId . '.' . $image->getClientOriginalExtension();
-            $path = $image->storeAs('public/logo', $imageName);
-
-            // URL oluştur
-            $productImageUrl = Storage::url($path);
-
-            // Mevcut kaydı güncelle
-            $orderImage->update([
-                'product_image' => $productImageUrl,
-                'mime_type' => $image->getClientMimeType(),
-            ]);
-        } else {
-            // Yeni resmi kaydet
-            $image = $request->file('logo_image');
-            $imageName = 'L' . $orderId . '.' . $image->getClientOriginalExtension();
-            $path = $image->storeAs('public/logo', $imageName);
-
-            // URL oluştur
-            $productImageUrl = Storage::url($path);
-
-            // Eğer mevcut resim yoksa, yeni bir OrderImage nesnesi oluştur ve kaydet
-            OrderImage::create([
-                'order_id' => $orderId,
-                'type' => 'L',
-                'product_image' => $productImageUrl,
-                'mime_type' => $image->getClientMimeType(),
-            ]);
-        }
-        $order = Order::where('id', $orderId)->first();
-
-        $message = [
-            'title' => 'Logo resmi güncellendi.',
-            'body' => 'Logo resmi güncellendi lütfen bu yeni logo bilgisiyle tasarımı oluşturun.',
-            'order' => $order
-        ];
-
-        if ($order->status !== 'Sipariş Onayı') {
-            $message = [
-                'title' => 'Sipariş İptal Edildi',
-                'body' => 'Siparişiniz iptal edildi.',
-                'order' => $order
-            ];
-
-            // Bildirimi yayınla
-            broadcast(new DesignerNotificationEvent($message));
-        }
-
-        return response()->json(['message' => 'Logo resmi başarıyla güncellendi.'], 200);
-    }
 
     /**
      * Mevcut tasarımı günceller ve yeni resmi kaydeder.
@@ -194,6 +112,41 @@ class UpdateOrderController extends Controller
         }
     }
 
+    /**
+     * Sipariş notunu günceller.
+     *
+     * @param Request $request İstek nesnesi
+     * @param int $orderId Sipariş ID'si
+     * @return JsonResponse
+     */
+    public function updateOrderNote(Request $request, $orderId)
+    {
+        // Doğrulama kuralları
+        $validator = Validator::make($request->all(), [
+            'note' => 'required|string|max:1000',
+        ], [
+            'note.required' => 'Lütfen bir not girin.',
+            'note.string' => 'Not metinsel bir değer olmalıdır.',
+            'note.max' => 'Not çok uzun, maksimum 1000 karakter olmalıdır.',
+        ]);
+
+        // Doğrulama hatası varsa, ilk hatayı döndür
+        if ($validator->fails()) {
+            return response()->json(['error' => $validator->errors()->first()], 422);
+        }
+        
+        // Siparişi bul
+        $order = Order::find($orderId);
+        if (!$order) {
+            return response()->json(['error' => 'Sipariş bulunamadı'], 404);
+        }
+
+        // Notu güncelle
+        $order->note = $request->input('note');
+        $order->save();
+        return response()->json(['message' => 'Sipariş notu başarıyla güncellendi.', 'order' => $order], 200);
+        
+    }
 
 
     /**
@@ -247,113 +200,151 @@ class UpdateOrderController extends Controller
     }
 
     /**
-     * Belirli bir siparişin adresini günceller.
+     * Belirli bir siparişin adresini günceller veya yeni bir adres ekler.
+     * Eğer 'shipping_type' 'T' ise mevcut adres silinir.
+     * Diğer 'shipping_type' değerleri için adres bilgisi zorunludur ve güncellenir/eklenir.
      *
-     * @param Request $request
+     * @param \Illuminate\Http\Request $request
      * @param int $orderId
      * @return \Illuminate\Http\JsonResponse
      * Örnek İstek Yapısı
      * @PUT /order-addresses/1
      * {
-     *   "address": "Adres"
+     *   "shipping_type": "A",
+     *   "address": "Yeni Adres"
      * }
      */
     public function updateOrderAddress(Request $request, $orderId)
     {
+        // shipping_type değerini kontrol et
+        $shippingType = $request->input('shipping_type');
+        
+        // Doğrulama kurallarını ayarla
+        $rules = [
+            'shipping_type' => 'required|in:A,G,T',
+        ];
+    
+        // Eğer shipping_type 'T' değilse, address alanı gerekli olacak
+        if ($shippingType !== 'T') {
+            $rules['address'] = 'required|string|max:65535';
+        }
+    
         // Gelen isteği doğrula
-        $validator = Validator::make($request->all(), [
-            'address' => 'required|string|max:65535', // Adres için doğrulama kuralları
-        ], [
+        $validator = Validator::make($request->all(), $rules, [
             'address.required' => 'Adres alanı gereklidir.',
             'address.string' => 'Adres alanı metin tipinde olmalıdır.',
             'address.max' => 'Adres çok uzun. Maksimum 65535 karakter olmalıdır.',
+            'shipping_type.required' => 'Kargo tipi alanı gereklidir.',
+            'shipping_type.in' => 'Geçersiz kargo tipi.',
         ]);
-
+    
         // Doğrulama başarısızsa hata döndür
         if ($validator->fails()) {
             return response()->json(['error' => $validator->errors()->first()], 422);
         }
-
-        // Sipariş adresini bul veya hata döndür
-        $orderAddress = OrderAddress::where('order_id', $orderId)->firstOrFail();
-
-        // Adresi güncelle
-        $orderAddress->update([
-            'address' => $request->input('address'),
-        ]);
-
+    
+        // Eğer shipping_type 'T' ise, mevcut adresi sil
+        if ($shippingType === 'T') {
+            OrderAddress::where('order_id', $orderId)->delete();
+        } else {
+            // Sipariş adresini bul veya yoksa yeni bir kayıt oluştur
+            $orderAddress = OrderAddress::updateOrCreate(
+                ['order_id' => $orderId],
+                ['address' => $request->input('address')]
+            );
+        }
+    
+        // Sipariş bilgisini al
         $order = Order::where('id', $orderId)->firstOrFail();
-
-        $message = [
-            'title' => 'Sipariş Adresi güncellendi.',
-            'body' => 'Sipariş adresi güncellendi yeni adres bilgileriyle gönderimi gerçekleştirebilirsiniz. ',
-            'order' => $order
-        ];
-
-
-        if ($order->status == 'Ürün Hazır' || $order->status == 'Ürün Transfer Aşaması') {
-            $message = [
-                'title' => 'Sipariş İptal Edildi',
-                'body' => 'Siparişiniz iptal edildi.',
-                'order' => $order
-            ];
-
-            // Bildirimi yayınla
-            broadcast(new CourierNotificationEvent($message));
-        }
-
-        // Başarılı yanıt döndür
-        return response()->json(['message' => 'Adres başarıyla güncellendi.', 'orderAddress' => $orderAddress], 200);
-    }
-
-    /**
-     * Belirli bir siparişe bağlı fatura bilgisinin detaylarını günceller.
-     *
-     * @param Request $request
-     * @param int $orderId Siparişin ID'si
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function updateInvoiceInfo(Request $request, $orderId)
-    {
-        // Gelen isteği doğrula
-        $validator = Validator::make($request->all(), [
-            'company_name' => 'required|string|max:255',
-            'address' => 'required|string|max:65535',
-            'tax_office' => 'required|string|max:255',
-            'tax_number' => 'required|string|max:255',
-        ], [
-            'company_name.required' => 'Şirket adı alanı gereklidir.',
-            'address.required' => 'Adres alanı gereklidir.',
-            'tax_office.required' => 'Vergi dairesi alanı gereklidir.',
-            'tax_number.required' => 'Vergi numarası alanı gereklidir.',
+    
+        // Sipariş durumunu ve kargo tipini güncelle
+        $order->update([
+            'shipping_type' => $shippingType,
+            // Diğer güncellemeler...
         ]);
-
-        // Doğrulama başarısızsa hata mesajlarını döndür
-        if ($validator->fails()) {
-            return response()->json(['error' => $validator->errors()->first()], 422);
-        }
-
-        // Siparişi bul ve ilişkili fatura bilgisini al
-        $order = Order::findOrFail($orderId);
-        $invoiceInfo = $order->invoiceInfo;
-
-        // Fatura bilgisini güncelle
-        $invoiceInfo->update($validator->validated());
-
-        $message = [
-            'title' => 'Fatura bilgileri güncellendi.',
-            'body' => 'Fatura bilgileri inceleyin ödemeyi kontrol edin.',
-            'order' => $order
-        ];
-
-        // Bildirimi yayınla
-        broadcast(new AdminNotificationEvent($message));
 
         // Başarılı yanıt döndür
         return response()->json([
-            'message' => 'Fatura bilgisi başarıyla güncellendi.',
-            'invoiceInfo' => $invoiceInfo
+            'message' => 'Sipariş adresi ve kargo tipi başarıyla güncellendi.',
+            'order' => $order
         ], 200);
+    }
+
+    /**
+     * Belirli bir siparişe bağlı fatura bilgisinin detaylarını günceller veya siler.
+     *
+     * @param Request $request
+     * @param Order $order Sipariş modeli
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateInvoiceInfo(Request $request, Order $order)
+    {
+        // Fatura tipini kontrol et
+        if ($request->input('invoice_type') === 'I') {
+            
+            // Siparişin fatura tipini güncelle
+            $order->update([
+                'invoice_type' => $request->input('invoice_type'),
+            ]);
+        
+            // Bireysel fatura bilgilerini sil
+            $order->invoiceInfo()->delete();
+        
+            return response()->json([
+                'message' => 'Bireysel fatura bilgileri başarıyla silindi.',
+            ], 200);
+        } else {
+            // Gelen isteği doğrula
+            $validator = Validator::make($request->all(), [
+                'company_name' => 'required|string|max:255',
+                'tax_office' => 'required|max:255',
+                'tax_number' => 'required|max:255',
+                'invoice_type' => 'required|max:255',
+                'order_address' => 'required|string|max:65535',
+            ], 
+            [
+                'company_name.required' => 'Şirket adı alanı gereklidir.',
+                'tax_office.required' => 'Vergi dairesi alanı gereklidir.',
+                'tax_number.required' => 'Vergi numarası alanı gereklidir.',
+                'invoice_type.required' => 'Fatura tipi alanı gereklidir.',
+                'addressControll.required' => 'Adres kontrolü alanı gereklidir.',
+                'addressControll.boolean' => 'Adres kontrolü alanı doğru veya yanlış olmalıdır.',
+                'order_address.required_if' => 'Adres kontrolü doğru olduğunda sipariş adresi alanı gereklidir.',
+                'order_address.string' => 'Sipariş adresi metinsel bir değer olmalıdır.',
+                'order_address.max' => 'Sipariş adresi çok uzun, maksimum 65535 karakter olmalıdır.',
+            ]);
+        
+            // Doğrulama başarısızsa hata mesajlarını döndür
+            if ($validator->fails()) {
+                return response()->json(['error' => $validator->errors()->first()], 422);
+            }
+        
+            // addressControll değerine göre hangi adresin kaydedileceğini belirle
+            $address = $request->input('order_address');
+        
+            // Fatura bilgilerini güncelle veya ekle
+            $order->invoiceInfo()->updateOrCreate(
+                [
+                    'order_id' => $order->id
+                ],
+                [
+                    'company_name' => $request->input('company_name'),
+                    'address' => $address,
+                    'tax_office' => $request->input('tax_office'),
+                    'tax_number' => $request->input('tax_number'),
+                ]
+            );
+        
+            // Siparişin fatura tipini güncelle
+            $order->update([
+                'invoice_type' => $request->input('invoice_type'),
+            ]);
+        
+            // Kurumsal fatura bilgileri güncellendi
+            return response()->json([
+                'message' => 'Kurumsal fatura bilgileri başarıyla güncellendi.',
+            ], 200);
+        }
     }
 
     /**

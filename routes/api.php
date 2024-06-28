@@ -281,6 +281,10 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // 'update-customer-info/{orderId}' rotasını tanımlayın
         Route::post('/update-customer-info/{orderId}', [UpdateOrderController::class, 'updateCustomerInfo']);
+
+        // 'update-customer-info/{orderId}' rotasını tanımlayın
+        Route::post('/update-note-info/{orderId}', [UpdateOrderController::class, 'updateOrderNote']);
+
         // 'update-logo-image/{orderId}' rotasını tanımlayın
         Route::post('/update-logo-image/{orderId}', [UpdateOrderController::class, 'updateLogoImage']);
         // 'update-customer-info/{orderId}' rotasını tanımlayın
@@ -288,7 +292,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // 'update-order-address/{orderId}' rotasını tanımlayın
         Route::post('/update-order-address/{orderId}', [UpdateOrderController::class, 'updateOrderAddress']);
         // 'update-invoice-info/{orderId}' rotasını tanımlayın
-        Route::post('/update-invoice-info/{orderId}', [UpdateOrderController::class, 'updateInvoiceInfo']);
+        Route::post('/update-invoice-info/{order}', [UpdateOrderController::class, 'updateInvoiceInfo']);
         // 'update-payment/{order}' rotasını tanımlayın
         Route::post('/update-payment/{order}', [UpdateOrderController::class, 'updatePayment']);
         // 'update-manufacturer/{order}' rotasını tanımlayın

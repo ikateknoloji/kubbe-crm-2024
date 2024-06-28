@@ -38,7 +38,7 @@ class Order extends Model
     ];
 
     // Siparişe ek olarak bu bilgileri 
-    protected $appends = ['original_status', 'status_color'];
+    protected $appends = ['original_status', 'status_color','original_shipping_type', 'original_invoice_type'];
 
     // 'status' sütunu için dönüştürme fonksiyonu
     public function getStatusAttribute($value)
@@ -115,6 +115,11 @@ class Order extends Model
         return $invoiceTypeMap[$value] ?? $value;
     }
 
+    public function getOriginalInvoiceTypeAttribute()
+    {
+        return $this->attributes['invoice_type']  ?? 'NULL';
+    }
+
     // 'shipping_type' sütunu için dönüştürme fonksiyonu burda teslim tipi tanımlar.
     public function getShippingTypeAttribute($value)
     {
@@ -137,6 +142,12 @@ class Order extends Model
         ];
     
         $this->attributes['shipping_type'] = $types[$value] ?? $value;
+    }
+
+    // Orijinal 'shipping_type' değerini döndüren fonksiyon
+    public function getOriginalShippingTypeAttribute()
+    {
+        return $this->attributes['shipping_type'] ?? 'NULL';
     }
 
     /**
