@@ -1,0 +1,17 @@
+nohup: ignoring input
+  2024-06-11 12:06:40 App\Events\CustomerNotificationEvent ........... RUNNING
+  2024-06-11 12:06:40 App\Events\CustomerNotificationEvent ..... 586.89ms DONE
+  2024-06-11 12:23:45 App\Events\AdminNotificationEvent .............. RUNNING
+  2024-06-11 12:23:45 App\Events\AdminNotificationEvent ........ 350.79ms DONE
+  2024-06-11 12:26:24 App\Events\AdminNotificationEvent .............. RUNNING
+  2024-06-11 12:26:25 App\Events\AdminNotificationEvent ........ 361.23ms DONE
+  2024-06-11 13:18:46 App\Events\CustomerNotificationEvent ........... RUNNING
+  2024-06-11 13:18:47 App\Events\CustomerNotificationEvent ..... 353.78ms DONE
+  2024-06-11 17:45:15 App\Events\CustomerNotificationEvent ........... RUNNING
+  2024-06-11 17:45:15 App\Events\CustomerNotificationEvent ..... 351.62ms DONE
+  2024-06-11 17:45:15 App\Events\DesignerNotificationEvent ........... RUNNING
+  2024-06-11 17:45:15 App\Events\DesignerNotificationEvent ...... 83.74ms DONE
+  2024-06-11 18:05:11 App\Events\CustomerNotificationEvent ........... RUNNING
+  2024-06-11 18:05:11 App\Events\CustomerNotificationEvent ..... 364.32ms DONE
+  2024-06-11 18:05:11 App\Events\DesignerNotificationEvent ........... RUNNING
+  2024-06-11 18:05:11 App\Events\DesignerNotificationEvent ...... 85.28ms DONE

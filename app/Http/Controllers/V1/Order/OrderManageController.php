@@ -188,7 +188,6 @@ class OrderManageController extends Controller
                 $imageName = 'payment_' . $order->id . '.' . $file->getClientOriginalExtension();
                 $filepath = $file->storeAs('public/payments', $imageName);
 
-
                 // Üretim resimlerini yükleme fonksiyonunu çağır
                 if (!empty($request->file('production_images'))) {
                     $this->storeProductionImages($request, $order->id);
@@ -211,9 +210,12 @@ class OrderManageController extends Controller
                 // OrderImage modelini veritabanına kaydet
                 $orderImage->save();
 
-                // Sipariş adresini kaydet
-                $orderAddress = new OrderAddress(['address' => $request->input('order_address')]);
-                $order->orderAddress()->save($orderAddress);
+                // Eğer shipping_type 'T' ise, adres bilgisi kaydedilmeyecek
+                if ($request->shipping_type !== 'T') {
+                    // Sipariş adresini kaydet
+                    $orderAddress = new OrderAddress(['address' => $request->input('order_address')]);
+                    $order->orderAddress()->save($orderAddress);
+                }
 
                 // Sipariş durumunu 'P' (Ödeme Onayı) olarak güncelle
                 $order->update([
@@ -702,58 +704,62 @@ class OrderManageController extends Controller
      * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\JsonResponse
      */
-    protected function validatePaymentRequest(Request $request)
-    {
-        try {
-            // Genel doğrulama kuralları
-            $rules = [
-                'payment_proof' => 'required|mimes:jpeg,png,jpg,gif,svg,pdf|max:10000',
-                'invoice_type' => 'required|in:I,C',
-                'shipping_type' => 'required|in:A,G,T',
-                'order_address' => 'required|string',
-                'production_images.*' => 'required|mimes:jpeg,png,jpg,gif,svg|max:10000', // production_images için validation
-            ];
+protected function validatePaymentRequest(Request $request)
+{
+    try {
+        // Genel doğrulama kuralları
+        $rules = [
+            'payment_proof' => 'required|mimes:jpeg,png,jpg,gif,svg,pdf|max:10000',
+            'invoice_type' => 'required|in:I,C',
+            'shipping_type' => 'required|in:A,G,T',
+            // Eğer shipping_type 'A' veya 'G' ise, order_address alanı zorunlu olacak
+            'order_address' => 'required_unless:shipping_type,T',
+            'production_images.*' => 'required|mimes:jpeg,png,jpg,gif,svg|max:10000', // production_images için validation
+        ];
 
-            // Kurumsal fatura bilgileri doğrulama kuralları
-            if ($request->invoice_type === 'C') {
-                $rules['company_name'] = 'required|string';
-                $rules['address'] = $request->addressControll === 'true' ? 'required|string' : 'nullable|string';
-                $rules['tax_office'] = 'required|string';
-                $rules['tax_number'] = 'required|string';
-            }
-
-            // Genel ve özel hata mesajları
-            $messages = [
-                'payment_proof.required' => 'Ödeme kanıtı dosyası gereklidir.',
-                'payment_proof.mimes' => 'Dosya formatı jpeg, png, jpg, gif, svg veya pdf olmalıdır.',
-                'payment_proof.max' => 'Dosya boyutu maksimum 10000 kilobayt olmalıdır.',
-                'invoice_type.required' => 'Fatura Tipi gereklidir.',
-                'invoice_type.in' => 'Fatura türü I veya C olmalıdır.',
-                'shipping_type.required' => 'Kargo Gönderim Şekli gereklidir.',
-                'shipping_type.in' => 'Kargo türü A, G veya T olmalıdır.',
-                'order_address.required' => 'Sipariş adresi gereklidir.',
-                'order_address.string' => 'Sipariş adresi bir metin olmalıdır.',
-                'company_name.required' => 'Şirket adı gereklidir.',
-                'company_name.string' => 'Şirket adı bir metin olmalıdır.',
-                'address.required' => 'Adres gereklidir.',
-                'address.string' => 'Adres bir metin olmalıdır.',
-                'tax_office.required' => 'Vergi dairesi gereklidir.',
-                'tax_office.string' => 'Vergi dairesi bir metin olmalıdır.',
-                'tax_number.required' => 'Vergi numarası gereklidir.',
-                'tax_number.string' => 'Vergi numarası bir metin olmalıdır.',
-                'production_images.*.required' => 'Üretim resmi dosyası gereklidir.',
-                'production_images.*.mimes' => 'Üretim resmi dosya formatı jpeg, png, jpg, gif veya svg olmalıdır.',
-                'production_images.*.max' => 'Üretim resmi dosya boyutu maksimum 10000 kilobayt olmalıdır.',
-            ];
-
-            // Validasyon işlemi
-            $request->validate($rules, $messages);
-
-            return response()->json(['message' => 'Validation successful.'], 200);
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            return response()->json(['errors' => $e->errors()], 422);
+        // Kurumsal fatura bilgileri doğrulama kuralları
+        if ($request->invoice_type === 'C') {
+            $rules['company_name'] = 'required|string';
+            $rules['address'] = $request->addressControll === 'true' ? 'required|string' : 'nullable|string';
+            $rules['tax_office'] = 'required|string';
+            $rules['tax_number'] = 'required|string';
         }
+        $messages = [
+        'payment_proof.required' => 'Ödeme kanıtı dosyası gereklidir.',
+        'payment_proof.mimes' => 'Dosya formatı jpeg, png, jpg, gif, svg veya pdf olmalıdır.',
+    'payment_proof.max' => 'Dosya boyutu maksimum 10000 kilobayt olmalıdır.',
+    'invoice_type.required' => 'Fatura Tipi gereklidir.',
+    'invoice_type.in' => 'Fatura türü Bireysel veya Kurumsal olmalıdır.',
+    'shipping_type.required' => 'Kargo Gönderim Şekli gereklidir.',
+    'shipping_type.in' => 'Kargo türü A, G veya T olmalıdır.',
+    'order_address.required_if' => 'Kargo türü Alıcı  veya Gönderici ödemeli olduğunda sipariş adresi gereklidir.',
+    'order_address.string' => 'Sipariş adresi bir metin olmalıdır.',
+    'company_name.required' => 'Şirket adı gereklidir.',
+    'company_name.string' => 'Şirket adı bir metin olmalıdır.',
+    'address.required' => 'Adres gereklidir.',
+    'address.string' => 'Adres bir metin olmalıdır.',
+    'tax_office.required' => 'Vergi dairesi gereklidir.',
+    'tax_office.string' => 'Vergi dairesi bir metin olmalıdır.',
+    'tax_number.required' => 'Vergi numarası gereklidir.',
+    'tax_number.string' => 'Vergi numarası bir metin olmalıdır.',
+    'production_images.*.required' => 'Üretim resmi dosyası gereklidir.',
+    'production_images.*.mimes' => 'Üretim resmi dosya formatı jpeg, png, jpg, gif veya svg olmalıdır.',
+    'production_images.*.max' => 'Üretim resmi dosya boyutu maksimum 10000 kilobayt olmalıdır.',
+        ];
+
+
+        // Validasyon işlemi
+        $request->validate($rules, $messages);
+
+        return response()->json(['message' => 'Validation successful.'], 200);
+    } catch (\Illuminate\Validation\ValidationException $e) {
+        return response()->json(['errors' => $e->errors()], 422);
     }
+}
+
+
+    // Diğer yardımcı fonksiyonlar burada yer alabilir...
+
 
     protected function storeProductionImages(Request $request, $orderId)
     {

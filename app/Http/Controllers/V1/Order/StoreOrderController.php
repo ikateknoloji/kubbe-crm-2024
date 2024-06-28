@@ -91,7 +91,7 @@ class StoreOrderController extends Controller
             'customer.name' => 'required|string|max:255',
             'customer.surname' => 'required|string|max:255',
             'customer.phone' => 'required|string|max:15',
-            'customer.email' => 'required|string|email|max:255',
+            'customer.email' => 'nullable|string|email|max:255',
             'order.order_name' => 'required|string|max:255',
             'order.offer_price' => 'required|numeric',
             'order.note' => 'nullable|string',
@@ -143,6 +143,13 @@ class StoreOrderController extends Controller
                 $logoRecord->save();
             }
         }
+
+        // Yöneticiye bildirim gönder
+        broadcast(new AdminNotificationEvent([
+            'title' => 'Sipariş Oluşturuldu',
+            'body' => 'Lütfen siparişi kontrol edin ve onaylayın.',
+            'order' => $order,
+        ]));
 
         // Başarılı yanıt döndür
         return response()->json([
@@ -445,7 +452,7 @@ class StoreOrderController extends Controller
     {
         // Validate file type and size
         $request->validate([
-            'logos' => 'required|file|mimes:jpeg,png,jpg,gif,pdf,ai|max:20480', // max 20MB
+            'logos' => 'required|file|mimes:jpeg,png,jpg,gif,pdf,ai,image/vnd.adobe.photoshop,application/x-photoshop|max:20000',
             'order_name' => 'required|string|max:255', // Validate order_name
         ]);
 
