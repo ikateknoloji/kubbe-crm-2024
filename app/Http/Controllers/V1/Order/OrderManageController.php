@@ -663,14 +663,14 @@ class OrderManageController extends Controller
 
         // Sipariş bulunamazsa hata döndür
         if ($order === null) {
-            return response()->json(['message' => 'Order not found'], 404);
+            return response()->json(['message' => 'Sipariş bulunamadı.'], 404);
         }
 
         // Siparişin üretim durumunu "completed" olarak güncelle
         $order->production_status = 'completed';
         $order->save();
 
-        return response()->json(['message' => 'Order marked as completed', 'order' => $order], 200);
+        return response()->json(['message' => 'Sipariş üretime gönderildi.', 'order' => $order], 200);
     }
 
     /**
