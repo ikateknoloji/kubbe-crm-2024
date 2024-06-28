@@ -149,8 +149,13 @@ class AuthController extends Controller
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             // Doğrulama hatalarını yakalama ve döndürme
+            $errors = $e->errors();
+            // Hatalar listesinin ilk elemanını al
+            $firstError = reset($errors)[0]; // PHP'nin reset fonksiyonu, dizinin ilk elemanını döndürür
+
+            // İlk hatayı yanıt olarak döndür
             return response()->json([
-                'errors' => $e->errors(),
+                'message' => $firstError,
             ], 422);
         }
     }
