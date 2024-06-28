@@ -23,16 +23,20 @@ class NotificationController extends Controller
     public function getAdminNotifications(Request $request)
     {
         $oneWeekAgo = Carbon::now()->subWeek();
-
+    
+        // Okunmamış bildirimleri önceleyerek sırala
         $notifications = AdminNotification::where('created_at', '>=', $oneWeekAgo)
-                                          ->orderByRaw('is_read ASC, created_at DESC')
+                                          ->orderBy('is_read', 'asc')
+                                          ->orderBy('created_at', 'desc')
                                           ->paginate(10);
-
-        $unreadCount = AdminNotification::where('is_read', 'false')->count();
-
+    
+        // Okunmamış bildirim sayısını hesapla
+        $unreadCount = AdminNotification::where('is_read', false)->where('created_at', '>=', $oneWeekAgo)->count();
+    
+        // Yanıtı hazırla
         $response = $notifications->toArray();
         $response['unread_count'] = $unreadCount;
-
+    
         return response()->json($response);
     }
 
@@ -45,18 +49,23 @@ class NotificationController extends Controller
     {
         $oneWeekAgo = Carbon::now()->subWeek();
 
+        // Okunmamış bildirimleri önceleyerek sırala
         $notifications = CourierNotification::where('created_at', '>=', $oneWeekAgo)
-                                            ->orderByRaw('is_read ASC, created_at DESC')
+                                            ->orderBy('is_read', 'asc')
+                                            ->orderBy('created_at', 'desc')
                                             ->paginate(10);
 
-        $unreadCount = CourierNotification::where('is_read', 'false')->count();
+        // Okunmamış bildirim sayısını hesapla
+        $unreadCount = CourierNotification::where('is_read', false)->where('created_at', '>=', $oneWeekAgo)->count();
 
+        // Yanıtı hazırla
         $response = $notifications->toArray();
         $response['unread_count'] = $unreadCount;
 
         return response()->json($response);
     }
 
+    
     /**
      * Display a paginated listing of designer notifications, ordered by creation date and unread status.
      *
@@ -67,10 +76,11 @@ class NotificationController extends Controller
         $oneWeekAgo = Carbon::now()->subWeek();
 
         $notifications = DesingerNotification::where('created_at', '>=', $oneWeekAgo)
-                                             ->orderByRaw('is_read ASC, created_at DESC')
-                                             ->paginate(10);
+                                            ->orderBy('is_read', 'asc') // Okunmamış bildirimler önce
+                                            ->orderBy('created_at', 'desc') // Sonra oluşturulma 
+                                            ->paginate(10);
 
-        $unreadCount = DesingerNotification::where('is_read', 'false')->count();
+        $unreadCount = DesingerNotification::where('is_read', 'false')->where('created_at', '>=', $oneWeekAgo)->count();
 
         $response = $notifications->toArray();
         $response['unread_count'] = $unreadCount;
@@ -87,19 +97,24 @@ class NotificationController extends Controller
     {
         $user_id = Auth::id();
         $oneWeekAgo = Carbon::now()->subWeek();
-
+    
+        // Kullanıcının okunmamış bildirimlerini önceleyerek sırala
         $notifications = UserNotification::where('user_id', $user_id)
                                          ->where('created_at', '>=', $oneWeekAgo)
-                                         ->orderByRaw('is_read ASC, created_at DESC')
+                                         ->orderBy('is_read', 'asc') // Okunmamış bildirimler önce
+                                         ->orderBy('created_at', 'desc') // Sonra oluşturulma tarihine göre azalan sırada
                                          ->paginate(10);
-
+    
+        // Kullanıcının okunmamış bildirim sayısını hesapla
         $unreadCount = UserNotification::where('user_id', $user_id)
-                                       ->where('is_read', 'false')
+                                       ->where('created_at', '>=', $oneWeekAgo)
+                                       ->where('is_read', false) // 'false' yerine false kullan
                                        ->count();
-
+    
+        // Yanıtı hazırla
         $response = $notifications->toArray();
         $response['unread_count'] = $unreadCount;
-
+    
         return response()->json($response);
     }
 
@@ -112,20 +127,26 @@ class NotificationController extends Controller
     {
         $user_id = Auth::id();
         $oneWeekAgo = Carbon::now()->subWeek();
-
+    
+        // Üretici bildirimlerini okunmamış olanları önceleyerek sırala
         $notifications = ManufacturerNotification::where('user_id', $user_id)
                                                  ->where('created_at', '>=', $oneWeekAgo)
-                                                 ->orderByRaw('is_read ASC, created_at DESC')
+                                                 ->orderBy('is_read', 'asc') // Okunmamış bildirimler önce
+                                                 ->orderBy('created_at', 'desc') // Sonra oluşturulma tarihine göre azalan  sırada
                                                  ->paginate(10);
-
+    
+        // Üreticinin okunmamış bildirim sayısını hesapla
         $unreadCount = ManufacturerNotification::where('user_id', $user_id)
-                                               ->where('is_read', 'false')
+                                                ->where('created_at', '>=', $oneWeekAgo)
+                                               ->where('is_read', false) // 'false' yerine false kullan
                                                ->count();
-
+    
+        // Yanıtı hazırla
         $response = $notifications->toArray();
         $response['unread_count'] = $unreadCount;
-
+    
         return response()->json($response);
     }
+
 
 }
