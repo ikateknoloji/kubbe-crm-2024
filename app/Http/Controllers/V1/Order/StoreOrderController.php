@@ -452,7 +452,7 @@ class StoreOrderController extends Controller
     {
         // Validate file type and size
         $request->validate([
-            'logos' => 'required|file|mimes:jpeg,png,jpg,gif,pdf,ai,image/vnd.adobe.photoshop,application/x-photoshop|max:20000',
+            'logos' => 'required|file|mimes:jpeg,png,jpg,gif,pdf,ai,image/vnd.adobe.photoshop,application/x-photoshop|max:40000',
             'order_name' => 'required|string|max:255', // Validate order_name
         ]);
 
