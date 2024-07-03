@@ -140,6 +140,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/desinger/search', [GetOrderController::class, 'desingerSearch']);
         // Üretim Tasarımı Ekleme
         Route::get('/production-stage-p', [GetOrderController::class, 'getProductionStagePOrders']);
+        // Üretime gönderilen siparişler
+        Route::get('/production-stage-completed', [GetOrderController::class, 'getProductionStageCompletedOrders']);
         // Üretime gidecek siparişleri getir
         Route::get('/production-status-orders', [GetOrderController::class, 'getProductionStatusOrders']);
         // Üretime gidecek siparişleri getir
