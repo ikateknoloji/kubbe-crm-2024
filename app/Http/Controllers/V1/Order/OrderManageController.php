@@ -182,33 +182,16 @@ class OrderManageController extends Controller
                 if ($request->invoice_type == 'C') {
                     $this->addCorporateInvoiceInfo($order, $request);
                 }
-
-                // Resim dosyasını yükle ve bilgileri al
-                $file = $request->file('payment_proof');
-                $imageName = 'payment_' . $order->id . '.' . $file->getClientOriginalExtension();
-                $filepath = $file->storeAs('public/payments', $imageName);
-
+                
                 // Üretim resimlerini yükleme fonksiyonunu çağır
                 if (!empty($request->file('production_images'))) {
                     $this->storeProductionImages($request, $order->id);
                 }
-
-                // URL oluştur
-                $productImageUrl = Storage::url($filepath);
-
-                // MIME tipini al
-                $mime_type = $file->getClientMimeType();
-
-                // OrderImage modeline order_id'yi ekleyerek kaydet
-                $orderImage = new OrderImage([
-                    'type' => 'P',
-                    'mime_type' => $mime_type,
-                    'product_image' => $productImageUrl,
-                    'order_id' => $order->id,
-                ]);
-
-                // OrderImage modelini veritabanına kaydet
-                $orderImage->save();
+ 
+                // Payment proof resmini yalnızca payment_status 'O' olduğunda yükleme ve OrderImage modelini oluşturma
+                if ($order->payment_status === 'O') {
+                    $this->uploadPaymentProof($request, $order);
+                }
 
                 // Eğer shipping_type 'T' ise, adres bilgisi kaydedilmeyecek
                 if ($request->shipping_type !== 'T') {
@@ -709,13 +692,15 @@ class OrderManageController extends Controller
         try {
             // Genel doğrulama kuralları
             $rules = [
-                'payment_proof' => 'required|mimes:jpeg,png,jpg,gif,svg,pdf|max:10000',
+                'payment_proof' => $request->payment_status === 'O' ? 'required|mimes:jpeg,png,jpg,gif,svg,pdf|max:10000' : 'nullable',
                 'invoice_type' => 'required|in:I,C',
                 'shipping_type' => 'required|in:A,G,T',
                 'order_address' => 'required_unless:shipping_type,T',
-                'production_images.*' => 'required|mimes:jpeg,png,jpg,gif,svg|max:10000', // production_images için validation
+                'production_images.*' => 'nullable|mimes:jpeg,png,jpg,gif,svg|max:10000', // production_images için validation
+                'payment_status' => 'required|in:O,AH,P',
             ];
 
+  
             // Kurumsal fatura bilgileri doğrulama kuralları
             if ($request->invoice_type === 'C') {
                 $rules['company_name'] = 'required|string';
@@ -724,15 +709,15 @@ class OrderManageController extends Controller
                 $rules['tax_number'] = 'required|string';
             }
             
-            $messages = [
-            'payment_proof.required' => 'Ödeme kanıtı dosyası gereklidir.',
+        $messages = [
+            'payment_proof.required_if' => 'Ödeme kanıtı dosyası, ödeme durumu "O" olduğunda gereklidir.',
             'payment_proof.mimes' => 'Dosya formatı jpeg, png, jpg, gif, svg veya pdf olmalıdır.',
             'payment_proof.max' => 'Dosya boyutu maksimum 10000 kilobayt olmalıdır.',
             'invoice_type.required' => 'Fatura Tipi gereklidir.',
-            'invoice_type.in' => 'Fatura türü Bireysel veya Kurumsal olmalıdır.',
+            'invoice_type.in' => 'Fatura türü Bireysel (I) veya Kurumsal (C) olmalıdır.',
             'shipping_type.required' => 'Kargo Gönderim Şekli gereklidir.',
-            'shipping_type.in' => 'Kargo türü A, G veya T olmalıdır.',
-            'order_address.required_if' => 'Kargo türü Alıcı  veya Gönderici ödemeli olduğunda sipariş adresi gereklidir.',
+            'shipping_type.in' => 'Kargo türü Alıcı (A), Gönderici (G) veya Tedarikçi (T) olmalıdır.',
+            'order_address.required_unless' => 'Sipariş adresi, kargo türü ofis teslim (T) olmadığı sürece gereklidir.',
             'order_address.string' => 'Sipariş adresi bir metin olmalıdır.',
             'company_name.required' => 'Şirket adı gereklidir.',
             'company_name.string' => 'Şirket adı bir metin olmalıdır.',
@@ -742,12 +727,11 @@ class OrderManageController extends Controller
             'tax_office.string' => 'Vergi dairesi bir metin olmalıdır.',
             'tax_number.required' => 'Vergi numarası gereklidir.',
             'tax_number.string' => 'Vergi numarası bir metin olmalıdır.',
-            'production_images.*.required' => 'Üretim resmi dosyası gereklidir.',
             'production_images.*.mimes' => 'Üretim resmi dosya formatı jpeg, png, jpg, gif veya svg olmalıdır.',
             'production_images.*.max' => 'Üretim resmi dosya boyutu maksimum 10000 kilobayt olmalıdır.',
-            'required_unless.shipping_type' => 'Sipariş adresi ofis teslim olmadığı sürece gereklidir.',
-            ];
-
+            'payment_status.required' => 'Ödeme durumu gereklidir.',
+            'payment_status.in' => 'Ödeme durumu Ödendi (O), Açık Hesap (AH) veya Peşinat (P) olmalıdır.',
+        ];
 
             // Validasyon işlemi
             $request->validate($rules, $messages);
@@ -782,5 +766,40 @@ class OrderManageController extends Controller
             // ProductionImage modelini veritabanına kaydet
             $productionImage->save();
         }
+    }
+
+    /**
+     * Payment proof resmini yükler ve OrderImage modelini oluşturur.
+     *
+     * @param \Illuminate\Http\Request $request
+     * @param \App\Models\Order $order
+     * @return \App\Models\OrderImage
+     * @throws \Exception
+     */
+    private function uploadPaymentProof(Request $request, Order $order)
+    {
+        // Resim dosyasını yükle ve bilgileri al
+        $file = $request->file('payment_proof');
+        $imageName = 'payment_' . $order->id . '.' . $file->getClientOriginalExtension();
+        $filepath = $file->storeAs('public/payments', $imageName);  
+
+        // URL oluştur
+        $productImageUrl = Storage::url($filepath); 
+
+        // MIME tipini al
+        $mime_type = $file->getClientMimeType();    
+
+        // OrderImage modeline order_id'yi ekleyerek kaydet
+        $orderImage = new OrderImage([
+            'type' => 'P',
+            'mime_type' => $mime_type,
+            'product_image' => $productImageUrl,
+            'order_id' => $order->id,
+        ]); 
+
+        // OrderImage modelini veritabanına kaydet
+        $orderImage->save();    
+
+        return $orderImage;
     }
 }
