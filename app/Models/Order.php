@@ -35,7 +35,8 @@ class Order extends Model
         'manufacturer_read',
         'production_stage',
         'production_status',
-        'payment_status'
+        'payment_status',
+        'paid_amount'
     ];
 
     // Siparişe ek olarak bu bilgileri 

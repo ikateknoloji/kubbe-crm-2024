@@ -214,6 +214,7 @@ class OrderManageController extends Controller
                     'body' => 'Lütfen Ödeme Kontrolü Yapın ve Ödeme onayı oluşturun.',
                     'order' => $order,
                 ]));
+            
 
                 return response()->json(['message' => 'Ödeme dosyası yüklendi ve Ödeme Onayı Bekliyor.'], 200);
             }
@@ -236,12 +237,22 @@ class OrderManageController extends Controller
      *   "payment_proof": "image.jpg"
      *  }
      */
-    public function verifyPayment(Order $order)
+    public function verifyPayment(Request $request, Order $order)
     {
+            // Gelen isteği doğrula
+        $validatedData = $request->validate([
+            'paid_amount' => 'nullable|numeric'
+        ]);
+
         // Sipariş durumunu kontrol et, sadece 'P' durumundakileri doğrula
         if ($order->status === 'Ödeme Aşaması') {
             // Ödeme durumunu 'PA' (Ödeme Onaylandı) olarak güncelle
-            $order->update(['status' => 'PA', 'customer_read' => false, 'production_status' => 'in_progress']);
+            $order->update([
+                'status' => 'PA',
+                'customer_read' => false,
+                'production_status' => 'in_progress',
+                'paid_amount' => $validatedData['paid_amount'] ?? 0 // Default değeri 0 olarak ayarla
+            ]);
 
             $message = [
                 'title' => 'Ödeme Onaylandı.',
