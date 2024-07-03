@@ -43,6 +43,7 @@ class GetOrderController extends Controller
                 },
             ])
             ->orderBy('updated_at') // En eski tarihten itibaren sırala
+            ->orderByRaw("FIELD(status, 'OC', 'DP', 'DA', 'P', 'PA', 'MS', 'PP', 'PR', 'PIT', 'PD')") // Enum sırasına göre sırala
             ->paginate(12);
 
         return response()->json(['orders' => $orders]);
@@ -95,6 +96,7 @@ class GetOrderController extends Controller
                 'customerInfo'
             ]) // customerInfo ilişkisini ekledik
             ->orderBy('updated_at') // En eski tarihten itibaren sırala
+            ->orderByRaw("FIELD(status, 'OC', 'DP', 'DA', 'P', 'PA', 'MS', 'PP', 'PR', 'PIT', 'PD')") // Enum sırasına göre sırala
             ->paginate(6);
 
         return response()->json(['orders' => $orders]);
@@ -120,6 +122,7 @@ class GetOrderController extends Controller
                     },
                 ]
             ) // customerInfo ilişkisini ekledik
+            ->orderByRaw("FIELD(status, 'OC', 'DP', 'DA', 'P', 'PA', 'MS', 'PP', 'PR', 'PIT', 'PD')") // Enum sırasına göre sırala
             ->paginate(6);
 
 
