@@ -306,6 +306,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/update-order-item-and-total-offer-price/{orderItemId}', [UpdateOrderController::class, 'updateOrderItemAndTotalOfferPrice']);
         // 'mark-product-in-transition/{order}' rotasını tanımlayın
         Route::post('/mark-product-in-transition/{order}', [UpdateOrderController::class, 'markProductInTransition']);
+        // ödme tutarını güncelleme rotası
+        Route::post('/update-payment-amount/{order}', [UpdateOrderController::class, 'updatePaymentAmount']);
+        // ödme tutarını güncelleme rotası
+        Route::get('/close-account/{order}', [UpdateOrderController::class, 'closeAccount']);
+        // Siparişi kargoya gönder rotası
+        Route::post('/ship-order/{order}', [OrderManageController::class, 'shipOrder']);
+        // Siparişin kargoya gönderilmesini geri al rotası
+        Route::post('/unship-order/{order}', [OrderManageController::class, 'unshipOrder']);
     });
 });
 

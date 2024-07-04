@@ -666,4 +666,51 @@ class UpdateOrderController extends Controller
 
         return response()->json(['message' => 'Kargo Resmi başarıyla güncellendi.'], 200);
     }
+
+    /**
+     * Ödeme Tutarını Güncelle.
+     * ? admin
+     * @param \App\Models\Order $order
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updatePaymentAmount(Request $request, Order $order)
+    {
+        // Gelen isteği doğrula
+        $validatedData = $request->validate([
+            'paid_amount' => 'required|numeric'
+        ]); 
+
+        try {
+            // Ödeme tutarını güncelle
+            $order->update([
+                'paid_amount' => $validatedData['paid_amount']
+            ]); 
+
+            return response()->json(['message' => 'Ödeme tutarı güncellendi.', 'order' => $order], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Ödeme tutarı güncelleme hatası: ' . $e->getMessage()], 500);
+        }
+    }
+
+    /**
+     * Close Account.
+     * ? admin
+     * @param \App\Models\Order $order
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function closeAccount(Request $request, Order $order)
+    {
+        try {
+            // Set the paid amount equal to the offer price
+            $order->update([
+                'paid_amount' => $order->offer_price
+            ]);
+        
+            return response()->json(['message' => 'Hesap başarıyla kapatıldı.', 'order' => $order], 200);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Error closing account: ' . $e->getMessage()], 500);
+        }
+    }
 }

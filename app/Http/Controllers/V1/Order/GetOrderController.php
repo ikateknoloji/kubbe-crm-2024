@@ -781,6 +781,7 @@ class GetOrderController extends Controller
     {
         $orders = Order::where('status', ['PD']) // 'OC' ve 'DP' dışındaki durumları getir
             ->where('is_rejected', 'A')
+            ->where('shipping_status', 'Y') // 'Y' (kargoya verilmiş) durumundaki siparişleri getir
             ->with([
                 'customer' => function ($query) {
                     // İlgili müşteri bilgilerini getir
@@ -820,6 +821,7 @@ class GetOrderController extends Controller
     {
         $orders = Order::where('status', ['PR']) // 'OC' ve 'DP' dışındaki durumları getir
             ->where('is_rejected', 'A')
+            ->where('shipping_status', 'Y') // 'Y' (kargoya verilmiş) durumundaki siparişleri getir
             ->when(request('invoice_type') === 'C', function ($query) {
                 $query->whereHas('orderImages', function ($subQuery) {
                     $subQuery->where('type', 'I');

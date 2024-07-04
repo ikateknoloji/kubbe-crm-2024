@@ -576,6 +576,8 @@ class OrderManageController extends Controller
 
         $order->orderImages()->save($orderImage);
 
+        $order->update(['shipping_status' => 'Y']);
+
         broadcast((new CustomerNotificationEvent($order->customer_id, [
             'title' => 'Fatura bilgileriniz Eklendi.',
             'body' => 'Fatura bilgileriniz eklendi. Fatura dosyasını indirmek için siparişinizin sayfasını ziyaret edebilirsiniz.',
@@ -665,6 +667,51 @@ class OrderManageController extends Controller
         $order->save();
 
         return response()->json(['message' => 'Sipariş üretime gönderildi.', 'order' => $order], 200);
+    }
+
+
+    /**
+     * Siparişi Kargoya Gönder.
+     * @param \App\Models\Order $order
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function shipOrder(Order $order)
+    {
+        if ($order->shipping_status === 'Y') {
+            return response()->json(['error' => 'Sipariş zaten kargoya gönderildi.'], 400);
+        }
+
+        broadcast(new CourierNotificationEvent([
+            'title' => 'Sipariş Kargoya Verebilirsiniz.',
+            'body' => 'Sipariş tamamlandı kargo bilgilerini alarak siparişi kargoya verebilirsiniz.',
+            'order' => $order,
+        ]));
+
+        $order->update(['shipping_status' => 'Y']);
+
+        return response()->json(['message' => 'Sipariş kargoya gönderildi.', 'order' => $order], 200);
+    }
+
+    /**
+     * Siparişin Kargoya Gönderilmesini Geri Al.
+     * @param \App\Models\Order $order
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function unshipOrder(Order $order)
+    {
+        if ($order->shipping_status === 'N') {
+            return response()->json(['error' => 'Sipariş zaten kargoya gönderilmedi.'], 400);
+        }
+
+        $order->update(['shipping_status' => 'N']);
+
+        broadcast(new CourierNotificationEvent([
+            'title' => 'Sipariş Kargoya verilmesin',
+            'body' => 'Sipariş hakkında bazı problemler var. Siparişin kargodan geri alın.',
+            'order' => $order,
+        ]));
+
+        return response()->json(['message' => 'Siparişin kargoya gönderilmesi geri alındı.', 'order' => $order], 200);
     }
 
     /**
