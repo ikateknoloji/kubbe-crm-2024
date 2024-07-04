@@ -529,6 +529,54 @@ class OrderManageController extends Controller
     }
 
     /**
+     * Ürünün ofisten teslim alındığını belirtir.
+     * @param \App\Models\Order $order
+     * @param \Illuminate\Http\Request $request
+     * @return mixed|\Illuminate\Http\JsonResponse
+     * Örnek İstek Yapısı
+     * @POST 
+     * {
+     *   "product_in_transition_image": "image.jpg"
+     * }
+     */
+    public function markProductAsPickedUpFromOffice(Request $request, Order $order)
+    {
+        try {
+            // Sipariş durumunu kontrol et, sadece 'PR' durumundakileri güncelle
+            if ($order->status === 'Ürün Hazır') { // 'PR' ile eşleştiğini kontrol et
+            
+                // Sipariş durumunu 'PIT' (Product in Transition) olarak güncelle
+                $order->update([
+                    'status' => 'PD',
+                    'admin_read' => false,
+                    'customer_read' => false,
+                    'production_date' => now(), // Üretim tarihini ayarla
+                ]);
+            
+                // Admin bildirim mesajı
+                broadcast(new AdminNotificationEvent([
+                    'title' => 'Ürün Ofisten Teslim Alındı.',
+                    'body' => 'Ürün ofisten teslim alındı. Detaylar için sipariş sayfasına ziyaret edin.',
+                    'order' => $order,
+                ]));
+            
+                // Müşteri bildirim mesajı
+                broadcast((new CustomerNotificationEvent($order->customer_id, [
+                    'title' => 'Ürün Ofisten Teslim Alındı.',
+                    'body' => 'Ürün ofisten teslim alındı. Detaylar için siparişinizin sayfasını ziyaret edebilirsiniz.',
+                    'order' => $order,
+                ])));
+            
+                return response()->json(['message' => 'Ürün ofisten teslim alındı.'], 200);
+            }
+        
+            return response()->json(['error' => 'Sipariş durumu ' . $order->status . ' olduğu için ürün ofisten teslim alınamıyor.'], 400);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return response()->json(['errors' => $e->errors()], 422);
+        }
+    }
+
+    /**
      * Belirli bir sipariş için fatura resmi yükler.
      * @param Request $request İstek nesnesi
      * @param Order $order Sipariş modeli

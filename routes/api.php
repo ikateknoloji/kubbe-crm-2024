@@ -155,7 +155,11 @@ Route::middleware('auth:sanctum')->group(function () {
         // Arama İşlemlerini yapma
         Route::get('/courier/search', [GetOrderController::class, 'courierSearch']);
         // Kargo gönderim şeklini al
-        Route::get('/orders/courier/await-courier', [GetOrderController::class, 'getAwaitCourier']);
+        Route::get('/orders/courier/await-courier', [GetOrderController::class, 'getAwaitCourierA']);
+        // Gönderici Ödemeler
+        Route::get('/orders/courier/g-courier', [GetOrderController::class, 'getAwaitCourierTypeG']);
+        // Ofis Teslim Olanlar
+        Route::get('/orders/courier/t-courier', [GetOrderController::class, 'getAwaitCourierTypeT']);
         // Kargo gönderim şeklini güncelle
         Route::get('/orders/courier/update-courier', [GetOrderController::class, 'getUpdateCourier']);
         // Kargo Siparişini al
@@ -269,6 +273,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('check.single.role:kurye')->group(function () {
         // Ürünün Kargo Aşamasında Olduğunu Belirtme ve Resim Ekleme rotası
         Route::post('/order/mark-product-in-transition/{order}', [OrderManageController::class, 'markProductInTransition']);
+        Route::post('/order/teslim-transition/{order}', [OrderManageController::class, 'markProductAsPickedUpFromOffice']);
     });
 });
 

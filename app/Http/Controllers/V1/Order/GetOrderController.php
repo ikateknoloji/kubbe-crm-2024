@@ -817,11 +817,12 @@ class GetOrderController extends Controller
      * }    
      */
 
-    public function getAwaitCourier(): JsonResponse
+    public function getAwaitCourierA(): JsonResponse
     {
         $orders = Order::where('status', ['PR']) // 'OC' ve 'DP' dışındaki durumları getir
             ->where('is_rejected', 'A')
             ->where('shipping_status', 'Y') // 'Y' (kargoya verilmiş) durumundaki siparişleri getir
+            ->where('shipping_type', 'A') // 'A' tipindeki siparişleri getir
             ->when(request('invoice_type') === 'C', function ($query) {
                 $query->whereHas('orderImages', function ($subQuery) {
                     $subQuery->where('type', 'I');
@@ -848,6 +849,82 @@ class GetOrderController extends Controller
             ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
             ->paginate(9);
 
+        return response()->json(['orders' => $orders]);
+    }
+
+    /**
+     * Aktif durumda olan ve teslim edilmemiş siparişleri getirir.
+     *
+     * @return JsonResponse
+     * Örnek İstek Yapısı
+     * @GET /orders/active
+     * Authorization: Bearer your-auth-token
+     * Content-Type: application/json
+     * {
+     *   "page": 1,
+     *   "per_page": 12
+     * }    
+     */
+    public function getAwaitCourierTypeG(): JsonResponse
+    {
+        $orders = Order::where('status', ['PR']) // 'OC' ve 'DP' dışındaki durumları getir
+            ->where('is_rejected', 'A')
+            ->where('shipping_status', 'Y') // 'Y' (kargoya verilmiş) durumundaki siparişleri getir
+            ->where('shipping_type', 'G') // 'A' tipindeki siparişleri getir
+            ->when(request('invoice_type') === 'C', function ($query) {
+                $query->whereHas('orderImages', function ($subQuery) {
+                    $subQuery->where('type', 'I');
+                });
+            })
+            ->when(request('invoice_type') === 'I', function ($query) {
+                // 'I' fatura tipi için ekstra bir koşul uygulamıyoruz
+            })
+            ->with([
+                'customer' => function ($query) {
+                    // İlgili müşteri bilgilerini getir
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'manufacturer' => function ($query) {
+                    // İlgili üretici bilgilerini getir
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'orderImages' => function ($query) {
+                    // 'D' tipindeki resimleri getir
+                    $query->where('type', 'D');
+                },
+                'customerInfo', // customerInfo ilişkisini ekledik
+            ])
+            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->paginate(9);
+
+        return response()->json(['orders' => $orders]);
+    }
+
+    public function getAwaitCourierTypeT(): JsonResponse
+    {
+        $orders = Order::where('status', 'PR') // 'PR' (in_progress) durumundaki siparişleri getir
+            ->where('is_rejected', 'A') // Onaylanmış siparişleri getir
+            ->where('shipping_status', 'Y') // Kargoya verilmiş siparişleri getir
+            ->where('shipping_type', 'T') // 'T' tipindeki siparişleri getir
+            ->when(request('invoice_type') === 'C', function ($query) {
+                $query->whereHas('orderImages', function ($subQuery) {
+                    $subQuery->where('type', 'I');
+                });
+            })
+            ->when(request('invoice_type') === 'I', function ($query) {
+                // 'I' fatura tipi için ekstra bir koşul uygulamıyoruz
+            })
+            ->with([
+                'customer:id,name,email,profile_photo', // İlgili müşteri bilgilerini getir
+                'manufacturer:id,name,email,profile_photo', // İlgili üretici bilgilerini getir
+                'orderImages' => function ($query) {
+                    $query->where('type', 'D'); // 'D' tipindeki resimleri getir
+                },
+                'customerInfo', // customerInfo ilişkisini ekledik
+            ])
+            ->orderByDesc('updated_at') // En son güncellenenlere göre sırala
+            ->paginate(9);
+            
         return response()->json(['orders' => $orders]);
     }
 
