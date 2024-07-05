@@ -189,7 +189,7 @@ class OrderManageController extends Controller
                 }
  
                 // Payment proof resmini yalnızca payment_status 'O' olduğunda yükleme ve OrderImage modelini oluşturma
-                if ($order->payment_status === 'O') {
+                if ($request->file('payment_proof')) {
                     $this->uploadPaymentProof($request, $order);
                 }
 
@@ -206,6 +206,7 @@ class OrderManageController extends Controller
                     'admin_read' => false,
                     'invoice_type' => $request->input('invoice_type'),
                     'shipping_type' => $request->input('shipping_type'),
+                    'payment_status' => $request->input('payment_status'),
                 ]);
 
                 // Yöneticiye bildirim gönder
