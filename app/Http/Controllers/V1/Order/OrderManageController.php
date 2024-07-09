@@ -207,6 +207,7 @@ class OrderManageController extends Controller
                     'invoice_type' => $request->input('invoice_type'),
                     'shipping_type' => $request->input('shipping_type'),
                     'payment_status' => $request->input('payment_status'),
+                    
                 ]);
 
                 // Yöneticiye bildirim gönder
@@ -305,6 +306,7 @@ class OrderManageController extends Controller
                     'status' => 'MS',
                     'production_start_date' => $date->format('Y-m-d H:i:s'), // Üretim başlangıç tarihini MySQL uyumlu formatla ayarla
                     'estimated_production_date' => $estimated_date->format('Y-m-d H:i:s'), // Tahmini üretim tarihi
+                     'production_status'=>'completed'
                 ]);
 
                 $message = [

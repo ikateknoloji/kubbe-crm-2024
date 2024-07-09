@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Order extends Model
 {
@@ -255,5 +256,17 @@ class Order extends Model
     public function productionImages(): HasMany
     {
         return $this->hasMany(ProductionImage::class, 'order_id');
+    }
+
+    public function orderItems(): HasManyThrough
+    {
+        return $this->hasManyThrough(
+            OrderItem::class,
+            OrderBasket::class,
+            'order_id', // orders tablosundaki ilgili sütun
+            'order_basket_id', // order_baskets tablosundaki ilgili sütun
+            'id', // orders tablosundaki id sütunu
+            'id' // order_baskets tablosundaki id sütunu
+        );
     }
 }

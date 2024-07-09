@@ -22,6 +22,8 @@ use App\Http\Controllers\V1\Role\GetUserInfoController;
 use App\Http\Controllers\V1\Role\RoleController;
 use App\Http\Controllers\V1\Update\UpdateOrderController;
 
+Route::get('/monthly-items', [GetOrderController::class, 'getPDFMonthlyOrderItemsCustomer']);
+
 // Kullanıcı Oluşturma veya Giriş yapma
 Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);

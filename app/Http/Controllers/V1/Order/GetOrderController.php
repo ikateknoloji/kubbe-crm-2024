@@ -10,6 +10,9 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Carbon\Carbon;
+use Dompdf\Dompdf;
+use Dompdf\Options;
 
 class GetOrderController extends Controller
 {
@@ -1311,5 +1314,148 @@ class GetOrderController extends Controller
 
         // Dönüştürülmüş sipariş nesnesini kullanabilirsiniz
         return response()->json(['order' => $order], 200);
+    }
+    
+    // İsteğe bağlı olarak müşteri ID ve tarih aralıklarını alıyoruz
+    public function getMonthlyOrderItemsCustomer(Request $request)
+    {
+        $customerId = $request->input('customer_id');
+        $month = $request->input('month');
+        $year = $request->input('year');
+
+        // Ayın başlangıç ve bitiş tarihlerini hesapla
+        $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+
+        // Siparişleri ve ilişkili baskets ve items'ları al
+        $orders = Order::where('customer_id', $customerId)
+        ->where('status', 'PD')
+        ->whereBetween('created_at', [$startDate, $endDate])
+        ->with(['orderItems'])
+        ->get();
+
+        // Eğer $orders null veya boşsa
+        if ($orders->isEmpty()) {
+            return response()->json([]);
+        }
+
+
+
+        return response()->json($orders);
+    }
+
+    // İsteğe bağlı olarak müşteri ID ve tarih aralıklarını alıyoruz
+    public function getMonthlyOrderItemsManufacturer(Request $request)
+    {
+        $customerId = $request->input('manufacturer_id');
+        $month = $request->input('month');
+        $year = $request->input('year');
+
+        // Ayın başlangıç ve bitiş tarihlerini hesapla
+        $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+
+        // Siparişleri ve ilişkili baskets ve items'ları al
+        $orders = Order::where('manufacturer_id', $customerId)
+        ->where('status', 'PD')
+        ->whereBetween('created_at', [$startDate, $endDate])
+        ->with(['orderItems'])
+        ->get();
+
+        // Eğer $orders null veya boşsa
+        if ($orders->isEmpty()) {
+            return response()->json([]);
+        }
+
+        return response()->json($orders);
+    }
+
+    public function getMonthlyOrderItemsAll(Request $request)
+    {
+        $month = $request->input('month');
+        $year = $request->input('year');
+
+        // Ayın başlangıç ve bitiş tarihlerini hesapla
+        $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+
+        // Siparişleri ve ilişkili baskets ve items'ları al
+        $orders = Order::where('status', 'PD')
+        ->whereBetween('created_at', [$startDate, $endDate])
+        ->with(['orderItems'])
+        ->get();
+
+        // Eğer $orders null veya boşsa
+        if ($orders->isEmpty()) {
+            return response()->json([]);
+        }
+
+
+
+        return response()->json($orders);
+    }
+
+    // İsteğe bağlı olarak müşteri ID ve tarih aralıklarını alıyoruz
+    public function getPDFMonthlyOrderItemsCustomer(Request $request)
+    {
+        $customerId = $request->input('customer_id');
+        $month = $request->input('month');
+        $year = $request->input('year');
+
+        // Ayın başlangıç ve bitiş tarihlerini hesapla
+        $startDate = Carbon::createFromDate($year, $month, 1)->startOfMonth();
+        $endDate = Carbon::createFromDate($year, $month, 1)->endOfMonth();
+
+        // Siparişleri ve ilişkili baskets ve items'ları al
+        $orders = Order::where('customer_id', $customerId)
+        ->where('status', 'PD')
+        ->whereBetween('created_at', [$startDate, $endDate])
+        ->with([
+            'orderItems' => function ($query) {
+                $query->with(['productType' => function ($query) {
+                        $query->select('id', 'product_type as type', 'product_category_id')
+                            ->where('product_category_id', 1); // Örneğin product_category_id 1 olanları getir
+                    }]);
+            }
+        ])
+        ->get();
+
+
+        // Eğer $orders null veya boşsa
+        if ($orders->isEmpty()) {
+            return response()->json([]);
+        }
+
+        $this->generatePDF($orders);
+
+
+        return response()->json($orders);
+    }
+
+    public function generatePDF($orders)
+    {
+   // Dompdf ayarları
+    $options = new Options();
+    $options->set('defaultFont', 'Arial');
+
+    // Dompdf oluştur
+    $dompdf = new Dompdf($options);
+
+    // HTML içeriği oluştur (örneğin pdf/orders.blade.php view dosyasını kullanabiliriz)
+    $html = view('pdf.orders', compact('orders'))->render();
+
+    // PDF oluştur
+    $dompdf->loadHtml($html);
+    $dompdf->setPaper('A4', 'landscape');
+    $dompdf->render();
+
+    // Dosya sistemine kaydetmek için yol oluştur
+    $filePath = storage_path('app/public/monthly_orders.pdf');
+
+    // Dosyayı kaydet
+    file_put_contents($filePath, $dompdf->output());
+
+    // Dosya yolunu döndür
+    return $filePath;
     }
 }
