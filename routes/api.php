@@ -342,3 +342,4 @@ Route::middleware('auth:sanctum')->group(function () {
 
 
 Route::get('/order-baskets/{id}', [OrderBasketController::class, 'getBasketById']);
+Route::delete('/delete-basket-items/{id}', [OrderBasketController::class, 'deleteBasketItem']);
