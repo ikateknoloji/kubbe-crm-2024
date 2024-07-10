@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\V1\Auth\AuthController;
 use App\Http\Controllers\V1\Auth\ProfileController;
 use App\Http\Controllers\V1\Auth\UserController;
+use App\Http\Controllers\V1\Basket\OrderBasketController;
 use App\Http\Controllers\V1\Category\CategoryController;
 use App\Http\Controllers\V1\Category\TypeController;
 use App\Http\Controllers\V1\Manage\ManageOrderController;
@@ -338,3 +339,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/notifications/user/{id}/read', [NotificationReadController::class, 'markUserNotificationAsRead']);
     Route::post('/notifications/manufacturer/{id}/read', [NotificationReadController::class, 'markManufacturerNotificationAsRead']);
 });
+
+
+Route::get('/order-baskets/{id}', [OrderBasketController::class, 'getBasketById']);
