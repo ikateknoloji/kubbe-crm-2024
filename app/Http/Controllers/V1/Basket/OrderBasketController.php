@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\V1\Basket;
 
 use App\Http\Controllers\Controller;
+use App\Models\Order;
 use App\Models\OrderBasket;
 use App\Models\OrderItem;
 use Illuminate\Http\Request;
@@ -40,6 +41,10 @@ class OrderBasketController extends Controller
     {
         // Belirtilen ID'ye sahip sipariş kalemini bul
         $orderItem = OrderItem::find($id);
+
+        $order = Order::find($orderItem->order_basket_id);
+
+        $order->offer_price -= $orderItem->quantity * $orderItem->unit_price;
 
         // Sipariş kalemi bulunamazsa, hata mesajı döndür
         if (!$orderItem) {
@@ -90,7 +95,21 @@ class OrderBasketController extends Controller
         }
     
         try {
-        
+               
+            // İlgili order_basket kaydını bulun
+            $orderBasket = OrderBasket::find($id);
+            if (!$orderBasket) {
+                return response()->json(['error' => 'Order basket not found'], 404);
+            }
+
+            // Siparişin toplam teklif fiyatını güncelleyin
+            $order = Order::find($orderBasket->order_id);
+            if (!$order) {
+                return response()->json(['error' => 'Order not found'], 404);
+            }
+            $order->offer_price += $request->input('quantity') * $request->input('unit_price');
+            $order->save();
+
             // Order item'i oluşturun veya veritabanına kaydedin
             $orderItem = OrderItem::create([
                 'product_type_id' => $request->input('product_type_id'),
@@ -101,7 +120,7 @@ class OrderBasketController extends Controller
                 'type' => $request->input('type'),
                 'order_basket_id' => $id,
             ]);
-        
+
             // Başarılı yanıt döndür (opsiyonel, validasyon başarılı olursa)
             return response()->json(['message' => 'Başarıyla Sipariş Kalemi Eklendi', 'data' => $orderItem], 200);
         } catch (\Exception $e) {
