@@ -42,10 +42,12 @@ class OrderBasketController extends Controller
         // Belirtilen ID'ye sahip sipariş kalemini bul
         $orderItem = OrderItem::find($id);
 
-        $order = Order::find($orderItem->order_basket_id);
+        $order = Order::find($orderItem->basket['order_id']);
 
         $order->offer_price -= $orderItem->quantity * $orderItem->unit_price;
 
+        $order->save();
+        
         // Sipariş kalemi bulunamazsa, hata mesajı döndür
         if (!$orderItem) {
             return response()->json(['message' => 'Order item not found'], 404);

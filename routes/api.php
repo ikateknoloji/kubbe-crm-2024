@@ -151,6 +151,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/orders-production-update-status', [OrderManageController::class, 'updateProductionStatus']);
         // Üretimi Tamamla
         Route::post('/mark-completed-orders/{orderId}', [OrderManageController::class, 'markOrderAsCompleted']);
+
+        Route::post('/orders/{order}/select-manufacturer', [OrderManageController::class, 'selectManufacturer']);
     });
 
     /** Kurye sipariş görüntüleme rotasıları. **/
@@ -247,7 +249,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Ödemeyi Doğrulama rotası
         Route::post('/orders/{order}/verify-payment', [OrderManageController::class, 'verifyPayment']);
         // Üretici Seçimi İşlemini Gerçekleştirme rotası
-        Route::post('/orders/{order}/select-manufacturer', [OrderManageController::class, 'selectManufacturer']);
+        // Route::post('/orders/{order}/select-manufacturer', [OrderManageController::class, 'selectManufacturer']);
         // Fatura bilgilerini ekleme
         Route::post('/orders/add-bill/{order}', [OrderManageController::class, 'addBill']);
     });
