@@ -169,8 +169,12 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/orders/courier/update-courier', [GetOrderController::class, 'getUpdateCourier']);
         // Kargo Siparişini al
         Route::get('/courier/order/{order}', [GetOrderController::class, 'getOrderByIdForCourier']);
+
         // QR code ile şipariş getirme
         Route::get('/courier/qr-code/{order_code}', [GetOrderController::class, 'getOrderByCode']);
+        
+        // Sipariş Hazır
+        Route::get('/courier/ready-order', [GetOrderController::class, 'getProductStatusOrder']);
     });
 
     // Üreticiye ait siparişleri getir
@@ -271,14 +275,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('check.single.role:uretici')->group(function () {
         // Üretim Sürecini Başlatma rotası
         Route::post('/orders/{order}/start-production', [OrderManageController::class, 'startProduction']);
-        // Ürünün Hazır Olduğunu Belirtme ve Resim Yükleme rotası
-        Route::post('/orders/{order}/mark-product-ready', [OrderManageController::class, 'markProductReady']);
     });
 
     Route::middleware('check.single.role:kurye')->group(function () {
         // Ürünün Kargo Aşamasında Olduğunu Belirtme ve Resim Ekleme rotası
         Route::post('/order/mark-product-in-transition/{order}', [OrderManageController::class, 'markProductInTransition']);
         Route::post('/order/teslim-transition/{order}', [OrderManageController::class, 'markProductAsPickedUpFromOffice']);
+        // Ürünün Hazır Olduğunu Belirtme ve Resim Yükleme rotası
+        Route::post('/orders/{order}/mark-product-ready', [OrderManageController::class, 'markProductReady']);
     });
 });
 
@@ -346,3 +350,4 @@ Route::middleware('auth:sanctum')->group(function () {
 Route::get('/order-baskets/{id}', [OrderBasketController::class, 'getBasketById']);
 Route::post('/delete-basket-items/{id}', [OrderBasketController::class, 'deleteBasketItem']);
 Route::post('/add-basket-items/{id}', [OrderBasketController::class, 'addOrderItems']);
+

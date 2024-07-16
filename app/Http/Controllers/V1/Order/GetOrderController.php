@@ -824,16 +824,8 @@ class GetOrderController extends Controller
     {
         $orders = Order::where('status', ['PR']) // 'OC' ve 'DP' dışındaki durumları getir
             ->where('is_rejected', 'A')
-            ->where('shipping_status', 'Y') // 'Y' (kargoya verilmiş) durumundaki siparişleri getir
+            ->where('shipping_status', 'N') // 'N' (kargoya verilmiş) durumundaki siparişleri getir
             ->where('shipping_type', 'A') // 'A' tipindeki siparişleri getir
-            ->when(request('invoice_type') === 'C', function ($query) {
-                $query->whereHas('orderImages', function ($subQuery) {
-                    $subQuery->where('type', 'I');
-                });
-            })
-            ->when(request('invoice_type') === 'I', function ($query) {
-                // 'I' fatura tipi için ekstra bir koşul uygulamıyoruz
-            })
             ->with([
                 'customer' => function ($query) {
                     // İlgili müşteri bilgilerini getir
@@ -872,16 +864,8 @@ class GetOrderController extends Controller
     {
         $orders = Order::where('status', ['PR']) // 'OC' ve 'DP' dışındaki durumları getir
             ->where('is_rejected', 'A')
-            ->where('shipping_status', 'Y') // 'Y' (kargoya verilmiş) durumundaki siparişleri getir
+            ->where('shipping_status', 'N') // 'Y' (kargoya verilmiş) durumundaki siparişleri getir
             ->where('shipping_type', 'G') // 'A' tipindeki siparişleri getir
-            ->when(request('invoice_type') === 'C', function ($query) {
-                $query->whereHas('orderImages', function ($subQuery) {
-                    $subQuery->where('type', 'I');
-                });
-            })
-            ->when(request('invoice_type') === 'I', function ($query) {
-                // 'I' fatura tipi için ekstra bir koşul uygulamıyoruz
-            })
             ->with([
                 'customer' => function ($query) {
                     // İlgili müşteri bilgilerini getir
@@ -907,13 +891,8 @@ class GetOrderController extends Controller
     {
         $orders = Order::where('status', 'PR') // 'PR' (in_progress) durumundaki siparişleri getir
             ->where('is_rejected', 'A') // Onaylanmış siparişleri getir
-            ->where('shipping_status', 'Y') // Kargoya verilmiş siparişleri getir
+            ->where('shipping_status', 'N') // 'N' (kargoya verilmiş) durumundaki siparişleri getir
             ->where('shipping_type', 'T') // 'T' tipindeki siparişleri getir
-            ->when(request('invoice_type') === 'C', function ($query) {
-                $query->whereHas('orderImages', function ($subQuery) {
-                    $subQuery->where('type', 'I');
-                });
-            })
             ->when(request('invoice_type') === 'I', function ($query) {
                 // 'I' fatura tipi için ekstra bir koşul uygulamıyoruz
             })
@@ -1232,6 +1211,31 @@ class GetOrderController extends Controller
         return response()->json(['orders' => $orders]);
     }
 
+    public function getProductStatusOrder(): JsonResponse
+    {
+        $orders = Order::where('production_status', 'completed') // production_stage değeri 'P' olanları getir
+            ->where('is_rejected', 'A')
+            ->where('status', 'PP')
+            ->with([
+                'customer' => function ($query) {
+                    // İlgili müşteri bilgilerini getir
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'manufacturer' => function ($query) {
+                    // İlgili üretici bilgilerini getir
+                    $query->select('id', 'name', 'email', 'profile_photo'); // User modelinizdeki mevcut sütunlar
+                },
+                'orderImages' => function ($query) {
+                    // 'D' tipindeki resimleri getir
+                    $query->where('type', 'D');
+                },
+                'customerInfo', // customerInfo ilişkisini ekledik
+            ])
+            ->orderBy('updated_at') // En eski tarihten itibaren sırala
+            ->paginate(9);
+
+        return response()->json(['orders' => $orders]);
+    }
 
     public function getProductionStatusOrders(): JsonResponse
     {

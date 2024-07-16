@@ -34,17 +34,11 @@ class UpdateOrderController extends Controller
         try {
             // Doğrulama kuralları
             $validator = Validator::make($request->all(), [
-                'design_image' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf|max:10048',
-                'design_images' => 'sometimes|array',
-                'design_images.*' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf|max:10048',
+                'design_image' => 'required|file|mimes:jpeg,png,jpg,gif,svg,pdf|max:20048',
             ], [
                 'design_image.required' => 'Lütfen bir tasarım resmi yükleyin.',
                 'design_image.file' => 'Dosya bir resim olmalıdır.',
                 'design_image.mimes' => 'Dosya formatı jpeg, png, jpg, gif veya svg olmalıdır.',
-                'design_images.required' => 'Lütfen en az bir tasarım resmi yükleyin.',
-                'design_images.*.required' => 'Lütfen bir tasarım resmi yükleyin.',
-                'design_images.*.file' => 'Dosya bir resim dosyası olmalıdır.',
-                'design_images.*.mimes' => 'Dosya formatı jpeg, png, jpg, gif veya svg olmalıdır.',
             ]);
 
             // Doğrulama hatası varsa, ilk hatayı döndür
@@ -69,32 +63,13 @@ class UpdateOrderController extends Controller
                     Storage::delete($currentDesign->design_path);
                 }
                 $currentDesign->update([
-                    'design_path' => $designPath,
+                    'product_image' => $designPath,
                 ]);
             } else {
-                // Eğer mevcut resim yoksa, yeni bir OrderImage nesnesi oluştur ve kaydet
-                OrderImage::create([
-                    'order_id' => $order->id,
-                    'type' => 'D',
-                    'design_path' => $designPath,
+
+                $currentDesign->update([
+                    'product_image' => $designPath,
                 ]);
-            }
-
-            // design_images arrayındaki her bir dosyayı yükle ve kaydet (isteğe bağlı)
-            if ($request->hasFile('design_images')) {
-                collect($request->file('design_images'))->each(function ($image) use ($order) {
-                    $imageName  = 'design_' . $order->id . '_' . uniqid() . '.' . $image->getClientOriginalExtension();
-                    $filepath = $image->storeAs('public/designs_files', $imageName);
-
-                    // URL oluştur
-                    $designPath = Storage::url($filepath);
-
-                    // DesignImage modeline order_id'yi ekleyerek kaydet
-                    DesignImage::create([
-                        'design_path' => $designPath,
-                        'order_id' => $order->id,
-                    ]);
-                });
             }
 
             $message = [

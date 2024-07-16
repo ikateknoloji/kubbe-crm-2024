@@ -504,6 +504,7 @@ class OrderManageController extends Controller
                     'status' => 'PD',
                     'admin_read' => false,
                     'customer_read' => false,
+                    'shipping_status' => 'Y',
                     'production_date' => now(), // Üretim tarihini ayarla
                 ]);
 
